@@ -4,3 +4,6 @@
 [submodule "backend/contracts/lib/openzeppelin-contracts"]
 	path = backend/contracts/lib/openzeppelin-contracts
 	url = https://github.com/OpenZeppelin/openzeppelin-contracts
+[submodule "project-toucans-v2"]
+	path = project-toucans-v2
+	url = https://github.com/emerald-dao/project-toucans-v2
