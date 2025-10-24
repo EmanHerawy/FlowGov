@@ -101,7 +101,51 @@ git submodule update --init --recursive
 
 3. Install dependencies:
 ```bash
+cd frontend
 npm install
 ```
+
+4. Set up the AI Agent (optional but recommended):
+```bash
+# Copy the example environment file
+cp frontend/.env.example frontend/.env
+
+# Edit .env and add your LLM API key (OpenAI or Anthropic)
+# See SETUP_AI_AGENT.md for detailed instructions
+```
+
+5. Run the development server:
+```bash
+cd frontend
+npm run dev
+```
+
+## 🤖 AI Governance Agent Setup
+
+The AI Governance Agent helps users understand proposals, voting, and delegation. **Quick setup:**
+
+1. Get an API key from [OpenAI](https://platform.openai.com/api-keys) or [Anthropic](https://console.anthropic.com/)
+2. Add to `frontend/.env`:
+   ```bash
+   OPENAI_API_KEY=sk-your-key-here
+   ```
+3. Restart the dev server
+
+**📖 Detailed Guide**: See [SETUP_AI_AGENT.md](./SETUP_AI_AGENT.md)
+
+**🔐 Security**: API keys are kept server-side only and never exposed to the client.
+
+**💡 Features**:
+- Context-aware responses about current DAO
+- Voting and delegation guidance
+- Proposal explanations
+- Treasury insights
+- Multisig operation help
+
+## Documentation
+
+- **[AI Agent Setup Guide](./SETUP_AI_AGENT.md)** - Quick start for the AI agent
+- **[AI Agent Implementation](./AI_AGENT_IMPLEMENTATION.md)** - Detailed architecture and security
+- **[AI Agent API Docs](./frontend/src/lib/features/dao-agent/README.md)** - Developer reference
 
 
