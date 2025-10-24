@@ -1,0 +1,16 @@
+.DS_Store
+node_modules
+/build
+/.svelte-kit
+/package
+.env
+.env.*
+!.env.example
+
+testnet-account.private.json
+testnet-account.private.json
+toucans-test.pkey
+mainnet-account.pkey
+testnet-account.pkey
+testnet-account.pkey
+testnet-account.pkey
