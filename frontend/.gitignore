@@ -1,16 +1,56 @@
-.DS_Store
+# Dependencies
 node_modules
+.pnpm-store
+
+# Build outputs
 /build
 /.svelte-kit
 /package
+.vercel
+.netlify
+.output
+
+# Environment variables (CRITICAL - keeps API keys safe)
 .env
 .env.*
 !.env.example
+.env.local
+.env.production
 
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE / Editor
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
+.idea
+*.swp
+*.swo
+*~
+
+# Flow private keys (CRITICAL - keeps wallet keys safe)
+*.pkey
+*.private.json
 testnet-account.private.json
-testnet-account.private.json
-toucans-test.pkey
 mainnet-account.pkey
 testnet-account.pkey
-testnet-account.pkey
-testnet-account.pkey
+toucans-test.pkey
+emulator-key.pkey
+
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Testing
+coverage
+.nyc_output
+
+# Temporary files
+*.tmp
+.cache
