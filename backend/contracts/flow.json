@@ -1,0 +1,169 @@
+{
+  "networks": {
+    "testnet": "access.devnet.nodes.onflow.org:9000"
+  },
+  "accounts": {
+    "testnet-deployer": {
+      "address": "0x877bafb3d5241d1b",
+      "key": {
+        "type": "hex",
+        "index": 0,
+        "signatureAlgorithm": "ECDSA_secp256k1",
+        "hashAlgorithm": "SHA2_256",
+        "privateKey": "854fd82dafea6aa7bbd8d627529c826d31abdfc1cb3889d50e07ea0f7050c980"
+      }
+    }
+  },
+  "contracts": {
+    "ToucansUtils": {
+      "source": "./flow/cadence/ToucansUtils.cdc",
+      "aliases": {
+        "testnet": "0x877bafb3d5241d1b"
+      }
+    },
+    "ToucansTokens": {
+      "source": "./flow/cadence/ToucansTokens.cdc",
+      "aliases": {
+        "testnet": "0x877bafb3d5241d1b"
+      }
+    },
+    "ToucansActions": {
+      "source": "./flow/cadence/ToucansActions.cdc",
+      "aliases": {
+        "testnet": "0x877bafb3d5241d1b"
+      }
+    },
+    "ToucansLockTokens": {
+      "source": "./flow/cadence/ToucansLockTokens.cdc",
+      "aliases": {
+        "testnet": "0x877bafb3d5241d1b"
+      }
+    },
+    "Toucans": {
+      "source": "./flow/cadence/Toucans.cdc",
+      "aliases": {
+        "testnet": "0x877bafb3d5241d1b"
+      }
+    },
+    "TestingDAO": {
+      "source": "./flow/cadence/TestingDAO.cdc",
+      "aliases": {
+        "testnet": "0x877bafb3d5241d1b"
+      }
+    },
+    "FungibleToken": {
+      "source": "./flow/cadence/utility/FungibleToken.cdc",
+      "aliases": {
+        "testnet": "0x9a0766d93b6608b7"
+      }
+    },
+    "FungibleTokenMetadataViews": {
+      "source": "./flow/cadence/utility/FungibleTokenMetadataViews.cdc",
+      "aliases": {
+        "testnet": "0x9a0766d93b6608b7"
+      }
+    },
+    "MetadataViews": {
+      "source": "./flow/cadence/utility/MetadataViews.cdc",
+      "aliases": {
+        "testnet": "0x631e88ae7f1d7c20"
+      }
+    },
+    "FlowToken": {
+      "source": "./flow/cadence/utility/FlowToken.cdc",
+      "aliases": {
+        "testnet": "0x7e60df042a9c0868"
+      }
+    },
+    "NonFungibleToken": {
+      "source": "./flow/cadence/utility/NonFungibleToken.cdc",
+      "aliases": {
+        "testnet": "0x631e88ae7f1d7c20"
+      }
+    },
+    "NFTCatalog": {
+      "source": "./flow/cadence/utility/NFTCatalog.cdc",
+      "aliases": {
+        "testnet": "0x324c34e1c517e4db"
+      }
+    },
+    "SwapInterfaces": {
+      "source": "./flow/cadence/utility/SwapInterfaces.cdc",
+      "aliases": {
+        "testnet": "0xa6850776a94e6551"
+      }
+    },
+    "stFlowToken": {
+      "source": "./flow/cadence/utility/stFlowToken.cdc",
+      "aliases": {
+        "testnet": "0x7a11a4c04f5d5d1c"
+      }
+    },
+    "SwapError": {
+      "source": "./flow/cadence/utility/SwapError.cdc",
+      "aliases": {
+        "testnet": "0xa6850776a94e6551"
+      }
+    },
+    "Burner": {
+      "source": "./flow/cadence/utility/Burner.cdc",
+      "aliases": {
+        "testnet": "0x9a0766d93b6608b7"
+      }
+    },
+    "FIND": {
+      "source": "./flow/cadence/utility/FIND.cdc",
+      "aliases": {
+        "testnet": "0xa16ab1d0abde3625"
+      }
+    },
+    "EmeraldIdentity": {
+      "source": "./flow/cadence/utility/EmeraldIdentity.cdc",
+      "aliases": {
+        "testnet": "0x39e42c67cc851cfb"
+      }
+    },
+    "LiquidStaking": {
+      "source": "./flow/cadence/utility/LiquidStaking.cdc",
+      "aliases": {
+        "testnet": "0x7a11a4c04f5d5d1c"
+      }
+    },
+    "FiatToken": {
+      "source": "./flow/cadence/utility/FiatToken.cdc",
+      "aliases": {
+        "testnet": "0xa983fecbed621163"
+      }
+    },
+    "SwapConfig": {
+      "source": "./flow/cadence/utility/SwapConfig.cdc",
+      "aliases": {
+        "testnet": "0xa6850776a94e6551"
+      }
+    },
+    "SwapFactory": {
+      "source": "./flow/cadence/utility/SwapFactory.cdc",
+      "aliases": {
+        "testnet": "0xa6850776a94e6551"
+      }
+    },
+    "ViewResolver": {
+      "source": "./flow/cadence/utility/ViewResolver.cdc",
+      "aliases": {
+        "testnet": "0x631e88ae7f1d7c20"
+      }
+    }
+  },
+  "deployments": {
+    "testnet": {
+      "testnet-deployer": [
+        "ToucansUtils",
+        "ToucansTokens",
+        "ToucansActions",
+        "ToucansLockTokens",
+        "Toucans",
+        "TestingDAO"
+      ]
+    }
+  }
+}
