@@ -44,7 +44,7 @@ File Location:                    Becomes API Endpoint:
 ## 🚀 Deployment Options
 
 
-### Option 2: Netlify
+### Option 1: Netlify
 
 **Steps:**
 
@@ -81,7 +81,7 @@ File Location:                    Becomes API Endpoint:
 - `+server.ts` becomes a Netlify Function
 - Stored in `.netlify/functions/`
 
-### Option 3: Cloudflare Pages
+### Option 2: Cloudflare Pages
 
 **Steps:**
 
@@ -89,7 +89,8 @@ File Location:                    Becomes API Endpoint:
    ```bash
    npm install -D @sveltejs/adapter-cloudflare
    ```
-
+Verify you have the variable available to the build. Do NOT commit secrets in .env; instead set it in Netlify.
+Add PUBLIC_FLOW_NETWORK to your site’s build environment variables (Netlify UI: Site → Site settings → Build & deploy → Environment → New variable) or in netlify.toml:
 2. **Update `svelte.config.js`**
    ```javascript
    import adapter from '@sveltejs/adapter-cloudflare';
