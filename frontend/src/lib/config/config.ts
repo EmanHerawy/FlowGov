@@ -1,9 +1,11 @@
+import { browser } from '$app/environment';
+
 const dappInfo = {
-	title: 'Toucans',
+	title: 'FlowGov',
 	description:
 		'Create a token. Unlock transparent fundraising and voting. Manage funds thorough a secure multisig treasury.',
-	url: 'https://toucans.ecdao.org',
-	author: 'Emerald City DAO',
+	url: browser ? window.location.origin : 'http://localhost:5173',
+	author: 'FlowGov Team',
 	icon: 'https://i.imgur.com/cQPEJBg.png'
 };
 

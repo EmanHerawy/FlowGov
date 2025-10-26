@@ -31,8 +31,19 @@ const getUserVaults = async (address: string): Promise<Vault[]> => {
 		return { key: x.project_id, value: x.owner };
 	});
 
-	const balances = await getProjectBalances(address, y);
-	console.log('balances', balances);
+	let balances: { [key: string]: number };
+	try {
+		balances = await getProjectBalances(address, y);
+		console.log('balances', balances);
+	} catch (error) {
+		console.error('Error fetching project balances (Toucans contract may not be migrated to Cadence 1.0):', error);
+		// Return empty balances if the contract hasn't been migrated
+		balances = {
+			Flow: 0,
+			USDC: 0,
+			stFlow: 0
+		};
+	}
 
 	const vaults: Vault[] = [];
 

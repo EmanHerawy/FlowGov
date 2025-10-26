@@ -81,6 +81,26 @@ Forte is the Flow network upgrade that brings **composability and automation** n
 
 Forte transforms how developers build on Flow by making smart contract automation and composability first-class citizens of the network.
 
+## 🔄 Cadence 1.0 Migration
+
+This project has been **fully migrated to Cadence 1.0** and deployed to Flow testnet at address `0x877bafb3d5241d1b`.
+
+### What Changed
+- ✅ All smart contracts updated to Cadence 1.0 syntax
+- ✅ Capability system modernized
+- ✅ Type system updates applied
+- ✅ Frontend configuration updated
+- ✅ Bug fixes for data handling
+
+### Migration Documentation
+See **[CADENCE_1.0_MIGRATION_SUMMARY.md](./CADENCE_1.0_MIGRATION_SUMMARY.md)** for:
+- Complete list of syntax changes
+- Smart contract modifications
+- Frontend bug fixes
+- Temporarily disabled features
+- Known limitations and workarounds
+- Testing checklist
+
 ## Getting Started
 
 ### Prerequisites
@@ -145,6 +165,7 @@ The AI Governance Agent helps users understand proposals, voting, and delegation
 
 ## Documentation
 
+- **[Cadence 1.0 Migration Guide](./CADENCE_1.0_MIGRATION_SUMMARY.md)** - Complete migration reference for smart contracts and frontend
 - **[AI Agent Setup Guide](./SETUP_AI_AGENT.md)** - Quick start for the AI agent
 - **[AI Agent Implementation](./AI_AGENT_IMPLEMENTATION.md)** - Detailed architecture and security
 - **[AI Agent API Docs](./frontend/src/lib/features/dao-agent/README.md)** - Developer reference
