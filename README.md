@@ -3,6 +3,7 @@
 ## Overview
 
 FlowGov is a fork of the [Toucans DAO project](https://github.com/emerald-dao/project-toucans-v2) with enhanced features for Flow blockchain governance. This project extends the original Toucans DAO functionality with AI-powered governance assistance and automated workflow capabilities using Flow's Forte upgrade.
+You can find the app deployed on [Netlify](https://flow-gov.netlify.app/).
 
 **Built for Forte Hacks by Flow: Build with Disney, Dune and Dapper**
 
