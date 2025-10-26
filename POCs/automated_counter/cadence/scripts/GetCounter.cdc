@@ -1,6 +1,6 @@
-import "Counter"
+import "AutoCounter"
 
 access(all)
 fun main(): Int {
-  return Counter.getCount()
+  return AutoCounter.getCounter()
 }

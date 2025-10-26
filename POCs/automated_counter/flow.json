@@ -6,6 +6,12 @@
 				"testing": "0000000000000007"
 			}
 		},
+		"AutoCounter": {
+			"source": "cadence/contracts/AutoCounter.cdc",
+			"aliases": {
+				"testing": "0000000000000008"
+			}
+		},
 		"CounterTransactionHandler": {
 			"source": "cadence/contracts/CounterTransactionHandler.cdc",
 			"aliases": {
@@ -133,7 +139,8 @@
 		"emulator": {
 			"emulator-account": [
 				"Counter",
-				"CounterTransactionHandler"
+				"CounterTransactionHandler",
+				"AutoCounter"
 			]
 		}
 	}
