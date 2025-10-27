@@ -1,6 +1,10 @@
 {
   "networks": {
-    "testnet": "access.devnet.nodes.onflow.org:9000"
+    "emulator": "127.0.0.1:3569",
+		"mainnet": "access.mainnet.nodes.onflow.org:9000",
+		"testing": "127.0.0.1:3569",
+		"testnet": "access.devnet.nodes.onflow.org:9000"
+
   },
   "accounts": {
     "testnet-deployer": {
@@ -12,7 +16,14 @@
         "hashAlgorithm": "SHA2_256",
         "privateKey": "854fd82dafea6aa7bbd8d627529c826d31abdfc1cb3889d50e07ea0f7050c980"
       }
-    }
+    },
+    "emulator-account": {
+			"address": "f8d6e0586b0a20c7",
+			"key": {
+				"type": "file",
+				"location": "emulator-account.pkey"
+			}
+		}
   },
   "contracts": {
     "ToucansUtils": {
