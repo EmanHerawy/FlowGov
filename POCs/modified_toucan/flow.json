@@ -1,5 +1,11 @@
 {
 	"contracts": {
+		"ToucanDAO": {
+			"source": "cadence/contracts/ToucanDAO.cdc",
+			"aliases": {
+				"testing": "0000000000000007"
+			}
+		},
 		"Counter": {
 			"source": "cadence/contracts/Counter.cdc",
 			"aliases": {
@@ -132,6 +138,7 @@
 	"deployments": {
 		"emulator": {
 			"emulator-account": [
+				"ToucanDAO",
 				"Counter",
 				"CounterTransactionHandler"
 			]
