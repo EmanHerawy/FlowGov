@@ -50,9 +50,11 @@
 {#if DOM}
 	<FeaturedDaoSection project={DOM} story={DOMInfo.story} title={`DAO of ${thisMonth}`} />
 {/if}
-<FeaturedDaoSection
-	project={ECDAO}
-	story={ECDAOInfo.story}
-	title={`Emerald City DAO - the creators of Toucans`}
-/>
+{#if ECDAO}
+	<FeaturedDaoSection
+		project={ECDAO}
+		story={ECDAOInfo.story}
+		title={`Emerald City DAO - the creators of Toucans`}
+	/>
+{/if}
 <ProjectsGridSection {projects} />

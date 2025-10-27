@@ -19,6 +19,7 @@
 				votingRound={MOCK_DAO.votingRounds[0]}
 				tokenContractAddress={null}
 				daoActions={[]}
+				completedActionIds={{}}
 			/>
 		</div>
 	</FeatureCard.Content>

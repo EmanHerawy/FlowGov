@@ -2,6 +2,7 @@
 	import type { Nft } from '$lib/features/nft-treasury/types/nft.interface';
 
 	export let nft: Nft;
+	export let donatedBy: string | undefined = undefined;
 	let name =
 		nft.traits && nft.traits['playerFirstName'] && nft.traits['playerLastName']
 			? nft.traits['playerFirstName'] + ' ' + nft.traits['playerLastName']

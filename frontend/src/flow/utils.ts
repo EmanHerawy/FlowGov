@@ -419,6 +419,16 @@ export const verifyAccountOwnership = async (userObject: CurrentUserObject) => {
 	if (!userObject.loggedIn) {
 		return false;
 	}
+	
+	// TEMPORARILY DISABLED: FCLCrypto contract on testnet is not Cadence 1.0 compatible
+	// The contract still uses 'pub' instead of 'access(all)'
+	// This is a Flow core contract issue that needs to be fixed by the Flow team
+	// For now, we skip verification on testnet to allow the app to function
+	if (network === 'testnet') {
+		console.warn('Account proof verification disabled on testnet due to FCLCrypto Cadence 1.0 incompatibility');
+		return true; // Skip verification on testnet
+	}
+	
 	const accountProofService = userObject.services.find(
 		(services) => services.type === 'account-proof'
 	);
