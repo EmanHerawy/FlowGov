@@ -380,20 +380,117 @@ access(all) contract ToucanDAO {
         return UInt64(self.members.keys.length)
     }
 
-    /// Create a new proposal with actual FLOW token staking
-    /// This function receives and holds FLOW tokens as stake from the transaction signer
-    /// The creator parameter must match the transaction signer for security
-    access(all) fun createProposal(
+    /// Create a treasury funding proposal
+    access(all) fun createFundTreasuryProposal(
+        title: String,
+        description: String,
+        amount: UFix64,
+        creator: Address,
+        stake: @FlowToken.Vault
+    ): @FlowToken.Vault {
+        let action = Action(
+            actionType: ActionType.ExecuteCustom,
+            data: FundTreasuryData(amount: amount, sourceAddress: 0x0) as AnyStruct
+        )
+        
+        return <-self.createProposalInternal(
+            title: title,
+            description: description,
+            action: action,
+            proposalType: ProposalType.FundTreasury,
+            creator: creator,
+            treasuryAmount: amount,
+            treasuryAddress: nil,
+            stake: <-stake
+        )
+    }
+    
+    /// Create a treasury withdrawal proposal
+    access(all) fun createWithdrawTreasuryProposal(
+        title: String,
+        description: String,
+        amount: UFix64,
+        recipientAddress: Address,
+        creator: Address,
+        stake: @FlowToken.Vault
+    ): @FlowToken.Vault {
+        let action = Action(
+            actionType: ActionType.ExecuteCustom,
+            data: WithdrawTreasuryData(amount: amount, recipientAddress: recipientAddress, recipientVaultPath: /public/flowTokenReceiver) as AnyStruct
+        )
+        
+        return <-self.createProposalInternal(
+            title: title,
+            description: description,
+            action: action,
+            proposalType: ProposalType.WithdrawTreasury,
+            creator: creator,
+            treasuryAmount: amount,
+            treasuryAddress: recipientAddress,
+            stake: <-stake
+        )
+    }
+    
+    /// Create an add member proposal (using FundTreasury type for now)
+    access(all) fun createAddMemberProposal(
+        title: String,
+        description: String,
+        memberAddress: Address,
+        creator: Address,
+        stake: @FlowToken.Vault
+    ): @FlowToken.Vault {
+        let action = Action(
+            actionType: ActionType.AddMember,
+            data: AddMemberData(address: memberAddress) as AnyStruct
+        )
+        
+        return <-self.createProposalInternal(
+            title: title,
+            description: description,
+            action: action,
+            proposalType: ProposalType.FundTreasury,  // Using FundTreasury as generic type
+            creator: creator,
+            treasuryAmount: nil,
+            treasuryAddress: nil,
+            stake: <-stake
+        )
+    }
+    
+    /// Create a remove member proposal (using WithdrawTreasury type for now)
+    access(all) fun createRemoveMemberProposal(
+        title: String,
+        description: String,
+        memberAddress: Address,
+        creator: Address,
+        stake: @FlowToken.Vault
+    ): @FlowToken.Vault {
+        let action = Action(
+            actionType: ActionType.RemoveMember,
+            data: RemoveMemberData(address: memberAddress) as AnyStruct
+        )
+        
+        return <-self.createProposalInternal(
+            title: title,
+            description: description,
+            action: action,
+            proposalType: ProposalType.WithdrawTreasury,  // Using WithdrawTreasury as generic type
+            creator: creator,
+            treasuryAmount: nil,
+            treasuryAddress: nil,
+            stake: <-stake
+        )
+    }
+    
+    /// Internal function to create proposals with common logic
+    access(self) fun createProposalInternal(
         title: String,
         description: String,
         action: Action,
         proposalType: ProposalType,
-        creator: Address,  // Must be the transaction signer (validated in transaction)
-        votingPeriod: UFix64?,
-        cooldownPeriod: UFix64?,
+        creator: Address,
         treasuryAmount: UFix64?,
         treasuryAddress: Address?,
-        stake: @FlowToken.Vault  // Actual FLOW tokens to stake from the signer
+        stake: @FlowToken.Vault
     ): @FlowToken.Vault {
         let stakedAmount = stake.balance
         
@@ -403,16 +500,12 @@ access(all) contract ToucanDAO {
             message: "Insufficient stake. Minimum required: ".concat(self.minimumProposalStake.toString())
         )
         
-        // Security: The vault can only come from the transaction signer
-        // This prevents anyone else from providing the stake
-        // The creator parameter is passed by the transaction and validated there
-        
         let proposalId = self.nextProposalId
         self.nextProposalId = self.nextProposalId + 1
         
-        // Use provided periods or defaults
-        let voting = votingPeriod ?? self.defaultVotingPeriod
-        let cooldown = cooldownPeriod ?? self.defaultCooldownPeriod
+        // Use DAO default periods
+        let voting = self.defaultVotingPeriod
+        let cooldown = self.defaultCooldownPeriod
 
         let proposal = Proposal(
             id: proposalId,
@@ -428,14 +521,14 @@ access(all) contract ToucanDAO {
             treasuryAddress: treasuryAddress
         )
 
-        // Actually deposit the staked FLOW tokens (only caller can provide these)
+        // Actually deposit the staked FLOW tokens
         self.stakedFundsResource.vault.deposit(from: <-stake)
         self.proposerStakes[proposalId] = stakedAmount
         self.proposals[proposalId] = proposal
 
         emit ProposalCreated(
             id: proposalId,
-            creator: creator,
+            creator: 0x0,  // Will be set from transaction signer in actual implementation
             title: title
         )
 
