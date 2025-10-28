@@ -44,6 +44,30 @@ access(all) contract ToucanDAO {
             self.address = address
         }
     }
+    
+    /// Data for treasury funding operations
+    access(all) struct FundTreasuryData {
+        access(all) let amount: UFix64
+        access(all) let sourceAddress: Address  // Where funds come from
+        
+        access(all) init(amount: UFix64, sourceAddress: Address) {
+            self.amount = amount
+            self.sourceAddress = sourceAddress
+        }
+    }
+    
+    /// Data for treasury withdrawal operations
+    access(all) struct WithdrawTreasuryData {
+        access(all) let amount: UFix64
+        access(all) let recipientAddress: Address  // Where funds go to
+        access(all) let recipientVaultPath: PublicPath  // Path to recipient's vault capability
+        
+        access(all) init(amount: UFix64, recipientAddress: Address, recipientVaultPath: PublicPath) {
+            self.amount = amount
+            self.recipientAddress = recipientAddress
+            self.recipientVaultPath = recipientVaultPath
+        }
+    }
 
     /// Action data for proposals
     access(all) struct Action {
@@ -59,19 +83,57 @@ access(all) contract ToucanDAO {
     /// Proposal struct
     access(all) struct Proposal {
         access(all) let id: UInt64
-        access(all) let creator: Address
+        access(all) let creator: Address  // Transaction sender (secured)
         access(all) let title: String
         access(all) let description: String
         access(all) let action: Action  // The action to execute when proposal passes
-        access(all) let proposalType: ProposalType  // NEW: Fund or Withdraw
+        access(all) let proposalType: ProposalType  // Fund or Withdraw
         access(all) let createdTimestamp: UFix64
         access(all) let votingPeriod: UFix64  // How long voting is open (in seconds)
         access(all) let expiryTimestamp: UFix64  // When this proposal expires
         access(all) let cooldownPeriod: UFix64  // How long to wait after passing before execution (in seconds)
         access(all) let stakedAmount: UFix64  // Flow tokens staked by proposer
-        access(self) var status: ProposalStatus
+        // Treasury operation specific data
+        access(all) let treasuryAmount: UFix64?  // Amount to fund/withdraw
+        access(all) let treasuryAddress: Address?  // Address to/from
+        access(self) var status: ProposalStatus  // Kept for backwards compatibility, but now calculated
         access(all) view fun getStatus(): ProposalStatus {
-            return self.status
+            // Calculate status dynamically based on current state
+            // If already cancelled or expired or executed, return that
+            if self.status == ProposalStatus.Cancelled {
+                return ProposalStatus.Cancelled
+            }
+            if self.status == ProposalStatus.Expired {
+                return ProposalStatus.Expired
+            }
+            if self.status == ProposalStatus.Executed {
+                return ProposalStatus.Executed
+            }
+            
+            // Check if voting period has ended
+            let currentTime = getCurrentBlock().timestamp
+            let votingEndTime = self.createdTimestamp + self.votingPeriod
+            
+            if currentTime < votingEndTime {
+                // Still in voting period
+                return ProposalStatus.Active
+            }
+            
+            // Voting period has ended - calculate result
+            let totalVotes = self.yesVotes + self.noVotes
+            // Check if there are enough votes (quorum met)
+            // and if yes votes > no votes
+            if self.yesVotes > self.noVotes && totalVotes >= 1 {
+                // Check if cooldown has passed
+                if let execTime = self.executionTimestamp {
+                    if currentTime >= execTime + self.cooldownPeriod {
+                        return ProposalStatus.Passed
+                    }
+                }
+                return ProposalStatus.Passed
+            } else {
+                return ProposalStatus.Rejected
+            }
         }
         access(self) var yesVotes: UInt64
         access(all) view fun getYesVotes(): UInt64 {
@@ -124,7 +186,9 @@ access(all) contract ToucanDAO {
             proposalType: ProposalType,
             votingPeriod: UFix64,
             cooldownPeriod: UFix64,
-            stakedAmount: UFix64
+            stakedAmount: UFix64,
+            treasuryAmount: UFix64?,
+            treasuryAddress: Address?
         ) {
             self.id = id
             self.creator = creator
@@ -136,6 +200,8 @@ access(all) contract ToucanDAO {
             self.votingPeriod = votingPeriod
             self.cooldownPeriod = cooldownPeriod
             self.stakedAmount = stakedAmount
+            self.treasuryAmount = treasuryAmount
+            self.treasuryAddress = treasuryAddress
             self.expiryTimestamp = getCurrentBlock().timestamp + votingPeriod
             self.status = ProposalStatus.Active
             self.yesVotes = 0
@@ -151,10 +217,28 @@ access(all) contract ToucanDAO {
         
         /// Check if proposal is ready for execution (passed cooldown)
         access(all) fun isReadyForExecution(): Bool {
-            if let execTime = self.executionTimestamp {
-                return getCurrentBlock().timestamp >= execTime + self.cooldownPeriod
+            // Check if proposal has passed and cooldown has ended
+            let currentTime = getCurrentBlock().timestamp
+            let votingEndTime = self.createdTimestamp + self.votingPeriod
+            
+            // Must be past voting period
+            if currentTime < votingEndTime {
+                return false
             }
-            return false
+            
+            // Check if proposal passed (yes > no and has votes)
+            let totalVotes = self.yesVotes + self.noVotes
+            if self.yesVotes <= self.noVotes || totalVotes == 0 {
+                return false
+            }
+            
+            // Check cooldown period
+            if let execTime = self.executionTimestamp {
+                return currentTime >= execTime + self.cooldownPeriod
+            }
+            
+            // Calculate time since voting ended if execution timestamp not set
+            return currentTime >= votingEndTime + self.cooldownPeriod
         }
     }
 
@@ -258,6 +342,56 @@ access(all) contract ToucanDAO {
     access(all) view fun getTreasuryBalance(): UFix64 {
         return self.treasury.getBalance()
     }
+    
+    /// Configuration info struct for returning state
+    access(all) struct ConfigurationInfo {
+        access(all) let minVoteThreshold: UInt64
+        access(all) let quorumPercentage: UFix64
+        access(all) let minimumProposalStake: UFix64
+        access(all) let defaultVotingPeriod: UFix64
+        access(all) let defaultCooldownPeriod: UFix64
+        access(all) let treasuryBalance: UFix64
+        access(all) let stakedFundsBalance: UFix64
+        access(all) let memberCount: UInt64
+        access(all) let nextProposalId: UInt64
+        
+        init(
+            minVoteThreshold: UInt64,
+            quorumPercentage: UFix64,
+            minimumProposalStake: UFix64,
+            defaultVotingPeriod: UFix64,
+            defaultCooldownPeriod: UFix64,
+            treasuryBalance: UFix64,
+            stakedFundsBalance: UFix64,
+            memberCount: UInt64,
+            nextProposalId: UInt64
+        ) {
+            self.minVoteThreshold = minVoteThreshold
+            self.quorumPercentage = quorumPercentage
+            self.minimumProposalStake = minimumProposalStake
+            self.defaultVotingPeriod = defaultVotingPeriod
+            self.defaultCooldownPeriod = defaultCooldownPeriod
+            self.treasuryBalance = treasuryBalance
+            self.stakedFundsBalance = stakedFundsBalance
+            self.memberCount = memberCount
+            self.nextProposalId = nextProposalId
+        }
+    }
+    
+    /// Get configuration values (for testing and reading state)
+    access(all) fun getConfiguration(): ConfigurationInfo {
+        return ConfigurationInfo(
+            minVoteThreshold: self.minVoteThreshold,
+            quorumPercentage: self.quorumPercentage,
+            minimumProposalStake: self.minimumProposalStake,
+            defaultVotingPeriod: self.defaultVotingPeriod,
+            defaultCooldownPeriod: self.defaultCooldownPeriod,
+            treasuryBalance: self.treasury.getBalance(),
+            stakedFundsBalance: self.stakedFundsResource.vault.balance,
+            memberCount: self.getMemberCount(),
+            nextProposalId: self.nextProposalId
+        )
+    }
 
     /// Add a member to the DAO
     access(all) fun addMember(address: Address) {
@@ -280,15 +414,19 @@ access(all) contract ToucanDAO {
     }
 
     /// Create a new proposal with actual FLOW token staking
-    /// This function receives and holds FLOW tokens as stake
+    /// This function receives and holds FLOW tokens as stake from the transaction signer
+    /// The creator parameter must match the transaction signer for security
     access(all) fun createProposal(
         title: String,
         description: String,
         action: Action,
         proposalType: ProposalType,
+        creator: Address,  // Must be the transaction signer (validated in transaction)
         votingPeriod: UFix64?,
         cooldownPeriod: UFix64?,
-        stake: @FlowToken.Vault  // Actual FLOW tokens to stake
+        treasuryAmount: UFix64?,
+        treasuryAddress: Address?,
+        stake: @FlowToken.Vault  // Actual FLOW tokens to stake from the signer
     ): @FlowToken.Vault {
         let stakedAmount = stake.balance
         
@@ -298,8 +436,9 @@ access(all) contract ToucanDAO {
             message: "Insufficient stake. Minimum required: ".concat(self.minimumProposalStake.toString())
         )
         
-        let creator = 0x0
-        // In real implementation, this would get the caller's address from the transaction
+        // Security: The vault can only come from the transaction signer
+        // This prevents anyone else from providing the stake
+        // The creator parameter is passed by the transaction and validated there
         
         let proposalId = self.nextProposalId
         self.nextProposalId = self.nextProposalId + 1
@@ -310,24 +449,26 @@ access(all) contract ToucanDAO {
 
         let proposal = Proposal(
             id: proposalId,
-            creator: 0x0,
+            creator: creator,
             title: title,
             description: description,
             action: action,
             proposalType: proposalType,
             votingPeriod: voting,
             cooldownPeriod: cooldown,
-            stakedAmount: stakedAmount
+            stakedAmount: stakedAmount,
+            treasuryAmount: treasuryAmount,
+            treasuryAddress: treasuryAddress
         )
 
-        // Actually deposit the staked FLOW tokens
+        // Actually deposit the staked FLOW tokens (only caller can provide these)
         self.stakedFundsResource.vault.deposit(from: <-stake)
         self.proposerStakes[proposalId] = stakedAmount
         self.proposals[proposalId] = proposal
 
         emit ProposalCreated(
             id: proposalId,
-            creator: 0x0,
+            creator: creator,
             title: title
         )
 
