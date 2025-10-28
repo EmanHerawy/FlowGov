@@ -96,41 +96,7 @@ access(all) contract ToucanDAO {
         // Treasury operation specific data
         access(all) let treasuryAmount: UFix64?  // Amount to fund/withdraw
         access(all) let treasuryAddress: Address?  // Address to/from
-        access(self) var status: ProposalStatus  // Used for Cancelled and Executed, others calculated dynamically
-        access(all) view fun getStatus(): ProposalStatus {
-            // Calculate status dynamically based on current state
-            
-            // Check if cancelled or executed (these are stored)
-            if self.status == ProposalStatus.Cancelled {
-                return ProposalStatus.Cancelled
-            }
-            if self.status == ProposalStatus.Executed {
-                return ProposalStatus.Executed
-            }
-            
-            // Check if voting period has ended using expiryTimestamp
-            let currentTime = getCurrentBlock().timestamp
-            
-            if currentTime < self.expiryTimestamp {
-                // Still in voting period
-                return ProposalStatus.Active
-            }
-            
-            // Voting period has ended - calculate result dynamically
-            let totalVotes = self.yesVotes + self.noVotes
-            
-            // Check if proposal has no votes - it's expired
-            if totalVotes == 0 {
-                return ProposalStatus.Expired
-            }
-            
-            // Check if proposal passed (yes > no and has votes)
-            if self.yesVotes > self.noVotes {
-                return ProposalStatus.Passed
-            } else {
-                return ProposalStatus.Rejected
-            }
-        }
+        access(contract) var status: ProposalStatus  // Used for Cancelled and Executed, others calculated dynamically
         access(self) var yesVotes: UInt64
         access(all) view fun getYesVotes(): UInt64 {
             return self.yesVotes
@@ -173,6 +139,7 @@ access(all) contract ToucanDAO {
         access(all) fun setExecutionTimestamp(timestamp: UFix64?) {
             self.executionTimestamp = timestamp
         }
+        
         
         access(all) view fun getAction(): Action {
             return self.action
@@ -482,7 +449,7 @@ access(all) contract ToucanDAO {
         let proposal = self.proposals[proposalId] ?? panic("Proposal does not exist")
         
         assert(
-            proposal.getStatus() == ProposalStatus.Active,
+            self.getStatus(proposalId: proposalId) == ProposalStatus.Active,
             message: "Can only cancel active proposals"
         )
         
@@ -518,7 +485,7 @@ access(all) contract ToucanDAO {
         let proposal = self.proposals[proposalId] ?? panic("Proposal does not exist")
         
         assert(
-            proposal.getStatus() == ProposalStatus.Passed,
+            self.getStatus(proposalId: proposalId) == ProposalStatus.Passed,
             message: "Proposal must be passed to finalize"
         )
         
@@ -551,18 +518,18 @@ access(all) contract ToucanDAO {
             ?? panic("Proposal does not exist")
 
         assert(
-            proposal.getStatus() == ProposalStatus.Active,
+            self.getStatus(proposalId: proposalId) == ProposalStatus.Active,
             message: "Proposal is not active"
         )
 
-        // In real implementation, would check if voter already voted
-        // Would use caller's address from transaction context
+        // Check if voter has already voted
+        assert(
+            !proposal.hasVoted(address: 0x0),  // In transaction: signer.address
+            message: "Voter has already voted on this proposal"
+        )
 
         proposal.addVote(isYes: vote)
-
-        // Mark that this address voted (using a dummy address in contract context)
-        // In transaction, would use: proposal.registerVoter(signer.address, vote)
-        proposal.registerVoter(address: 0x0, vote: vote)
+        proposal.registerVoter(address: 0x0, vote: vote)  // In transaction: signer.address
 
         self.proposals[proposalId] = proposal
 
@@ -573,37 +540,10 @@ access(all) contract ToucanDAO {
             newYesVotes: proposal.getYesVotes(),
             newNoVotes: proposal.getNoVotes()
         )
-
-        // Check if proposal should pass or fail
-        let totalVotes = proposal.getYesVotes() + proposal.getNoVotes()
-        let totalMembers = UInt64(self.members.keys.length)
         
-        // Check if quorum is met and proposal should pass
-        if totalMembers > 0 && totalVotes >= self.minVoteThreshold {
-            let participationPercentage = (UFix64(totalVotes) / UFix64(totalMembers)) * 100.0
-            
-            if participationPercentage >= self.quorumPercentage {
-                if proposal.getYesVotes() > proposal.getNoVotes() {
-                    proposal.setStatus(newStatus: ProposalStatus.Passed)
-                    proposal.setExecutionTimestamp(timestamp: getCurrentBlock().timestamp)
-                    self.proposals[proposalId] = proposal
-                    
-                    emit ProposalPassed(
-                        id: proposalId,
-                        executionTimestamp: getCurrentBlock().timestamp
-                    )
-                } else if proposal.getNoVotes() >= proposal.getYesVotes() {
-                    proposal.setStatus(newStatus: ProposalStatus.Rejected)
-                    self.proposals[proposalId] = proposal
-                    
-                    emit ProposalRejected(
-                        id: proposalId
-                    )
-                }
-            }
-        }
+        // Voting process complete - status will be calculated dynamically
     }
-
+    
     /// Get a proposal by ID
     access(all) fun getProposal(proposalId: UInt64): Proposal? {
         let proposal = self.proposals[proposalId]
@@ -611,6 +551,56 @@ access(all) contract ToucanDAO {
             return proposal
         }
         return nil
+    }
+    
+    /// Get proposal status with proper quorum and threshold checking
+    access(all) fun getStatus(proposalId: UInt64): ProposalStatus {
+        let proposal = self.proposals[proposalId] ?? panic("Proposal does not exist")
+        
+        // Check if cancelled or executed (these are stored)
+        let storedStatus = proposal.status
+        if storedStatus == ProposalStatus.Cancelled {
+            return ProposalStatus.Cancelled
+        }
+        if storedStatus == ProposalStatus.Executed {
+            return ProposalStatus.Executed
+        }
+        
+        // Check if voting period has ended using expiryTimestamp
+        let currentTime = getCurrentBlock().timestamp
+        
+        if currentTime < proposal.expiryTimestamp {
+            // Still in voting period
+            return ProposalStatus.Active
+        }
+        
+        // Voting period has ended - calculate result with quorum checking
+        let totalVotes = proposal.getYesVotes() + proposal.getNoVotes()
+        let totalMembers = UInt64(self.members.keys.length)
+        
+        // Check if proposal has no votes - it's expired
+        if totalVotes == 0 {
+            return ProposalStatus.Expired
+        }
+        
+        // Check quorum and threshold requirements
+        if totalMembers > 0 && totalVotes >= self.minVoteThreshold {
+            let participationPercentage = (UFix64(totalVotes) / UFix64(totalMembers)) * 100.0
+            
+            if participationPercentage >= self.quorumPercentage {
+                if proposal.getYesVotes() > proposal.getNoVotes() {
+                    return ProposalStatus.Passed
+                } else {
+                    return ProposalStatus.Rejected
+                }
+            } else {
+                // Quorum not met
+                return ProposalStatus.Rejected
+            }
+        } else {
+            // Not enough votes to meet minimum threshold
+            return ProposalStatus.Rejected
+        }
     }
     
     /// Internal function to update proposal status
@@ -638,12 +628,12 @@ access(all) contract ToucanDAO {
             ?? panic("Proposal does not exist")
 
         assert(
-            proposal.getStatus() == ProposalStatus.Passed,
+            self.getStatus(proposalId: proposalId) == ProposalStatus.Passed,
             message: "Proposal must be passed to execute"
         )
 
         assert(
-            proposal.getStatus() != ProposalStatus.Executed,
+            self.getStatus(proposalId: proposalId) != ProposalStatus.Executed,
             message: "Proposal has already been executed"
         )
         
