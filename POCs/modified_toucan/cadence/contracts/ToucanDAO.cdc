@@ -96,40 +96,36 @@ access(all) contract ToucanDAO {
         // Treasury operation specific data
         access(all) let treasuryAmount: UFix64?  // Amount to fund/withdraw
         access(all) let treasuryAddress: Address?  // Address to/from
-        access(self) var status: ProposalStatus  // Kept for backwards compatibility, but now calculated
+        access(self) var status: ProposalStatus  // Used for Cancelled and Executed, others calculated dynamically
         access(all) view fun getStatus(): ProposalStatus {
             // Calculate status dynamically based on current state
-            // If already cancelled or expired or executed, return that
+            
+            // Check if cancelled or executed (these are stored)
             if self.status == ProposalStatus.Cancelled {
                 return ProposalStatus.Cancelled
-            }
-            if self.status == ProposalStatus.Expired {
-                return ProposalStatus.Expired
             }
             if self.status == ProposalStatus.Executed {
                 return ProposalStatus.Executed
             }
             
-            // Check if voting period has ended
+            // Check if voting period has ended using expiryTimestamp
             let currentTime = getCurrentBlock().timestamp
-            let votingEndTime = self.createdTimestamp + self.votingPeriod
             
-            if currentTime < votingEndTime {
+            if currentTime < self.expiryTimestamp {
                 // Still in voting period
                 return ProposalStatus.Active
             }
             
-            // Voting period has ended - calculate result
+            // Voting period has ended - calculate result dynamically
             let totalVotes = self.yesVotes + self.noVotes
-            // Check if there are enough votes (quorum met)
-            // and if yes votes > no votes
-            if self.yesVotes > self.noVotes && totalVotes >= 1 {
-                // Check if cooldown has passed
-                if let execTime = self.executionTimestamp {
-                    if currentTime >= execTime + self.cooldownPeriod {
-                        return ProposalStatus.Passed
-                    }
-                }
+            
+            // Check if proposal has no votes - it's expired
+            if totalVotes == 0 {
+                return ProposalStatus.Expired
+            }
+            
+            // Check if proposal passed (yes > no and has votes)
+            if self.yesVotes > self.noVotes {
                 return ProposalStatus.Passed
             } else {
                 return ProposalStatus.Rejected
@@ -165,7 +161,12 @@ access(all) contract ToucanDAO {
             self.voters[address] = vote
         }
         
-        access(all) fun setStatus(newStatus: ProposalStatus) {
+        access(contract) fun setStatus(newStatus: ProposalStatus) {
+            // Only allow setting Cancelled and Executed status - others are calculated dynamically
+            assert(
+                newStatus == ProposalStatus.Cancelled || newStatus == ProposalStatus.Executed,
+                message: "Only Cancelled and Executed status can be set - other statuses are calculated dynamically"
+            )
             self.status = newStatus
         }
         
@@ -203,7 +204,7 @@ access(all) contract ToucanDAO {
             self.treasuryAmount = treasuryAmount
             self.treasuryAddress = treasuryAddress
             self.expiryTimestamp = getCurrentBlock().timestamp + votingPeriod
-            self.status = ProposalStatus.Active
+            self.status = ProposalStatus.Active  // Initial status, will be calculated dynamically
             self.yesVotes = 0
             self.noVotes = 0
             self.executionTimestamp = nil
@@ -219,10 +220,9 @@ access(all) contract ToucanDAO {
         access(all) fun isReadyForExecution(): Bool {
             // Check if proposal has passed and cooldown has ended
             let currentTime = getCurrentBlock().timestamp
-            let votingEndTime = self.createdTimestamp + self.votingPeriod
             
-            // Must be past voting period
-            if currentTime < votingEndTime {
+            // Must be past voting period (using expiryTimestamp)
+            if currentTime < self.expiryTimestamp {
                 return false
             }
             
@@ -238,7 +238,7 @@ access(all) contract ToucanDAO {
             }
             
             // Calculate time since voting ended if execution timestamp not set
-            return currentTime >= votingEndTime + self.cooldownPeriod
+            return currentTime >= self.expiryTimestamp + self.cooldownPeriod
         }
     }
 
@@ -476,18 +476,6 @@ access(all) contract ToucanDAO {
         return <-FlowToken.createEmptyVault(vaultType: Type<@FlowToken.Vault>())
     }
     
-    /// Check if a proposal has expired and update status
-    access(all) fun checkProposalExpiry(proposalId: UInt64): Bool {
-        let proposal = self.proposals[proposalId] ?? panic("Proposal does not exist")
-        
-        if proposal.isExpired() && proposal.getStatus() == ProposalStatus.Active {
-            proposal.setStatus(newStatus: ProposalStatus.Expired)
-            self.proposals[proposalId] = proposal
-            return true
-        }
-        return false
-    }
-    
     /// Cancel a proposal and return the actual staked FLOW tokens
     /// Can only be called by the proposal creator and only if no one has voted
     access(all) fun cancelProposal(proposalId: UInt64, proposerAddress: Address): @FlowToken.Vault {
@@ -515,6 +503,7 @@ access(all) contract ToucanDAO {
         let stakeAmount = self.proposerStakes[proposalId] ?? panic("Proposal stake not found")
         self.proposerStakes[proposalId] = nil
         
+        // Mark proposal as cancelled
         proposal.setStatus(newStatus: ProposalStatus.Cancelled)
         self.proposals[proposalId] = proposal
         
