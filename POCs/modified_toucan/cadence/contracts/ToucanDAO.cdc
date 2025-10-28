@@ -471,8 +471,7 @@ access(all) contract ToucanDAO {
         self.proposerStakes[proposalId] = nil
         
         // Mark proposal as cancelled
-        proposal.setStatus(newStatus: ProposalStatus.Cancelled)
-        self.proposals[proposalId] = proposal
+        self.updateProposalStatus(proposalId: proposalId, newStatus: ProposalStatus.Cancelled)
         
         // Withdraw and return the staked tokens
         let refund <- self.stakedFundsResource.vault.withdraw(amount: stakeAmount) as! @FlowToken.Vault
