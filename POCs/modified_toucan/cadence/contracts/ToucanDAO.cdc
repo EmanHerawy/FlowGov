@@ -1,6 +1,8 @@
 import "FlowToken"
 import "FungibleToken"
 import "ToucanToken"
+import "FlowTransactionSchedulerUtils"
+import "FlowTransactionScheduler"
 
 access(all) contract ToucanDAO {
 
@@ -219,6 +221,7 @@ access(all) contract ToucanDAO {
         creator: Address,
         title: String
     )
+    access(all) event TransactionScheduled(txId: UInt64, executeAt: UFix64)
 
     access(all) event ProposalActivated(
         proposalId: UInt64,
@@ -399,7 +402,7 @@ access(all) contract ToucanDAO {
         title: String,
         description: String,
         amount: UFix64,
-        creator: Address
+        signer: auth(BorrowValue) &Account
     ) {
         let action = Action(
             actionType: ActionType.ExecuteCustom,
@@ -411,7 +414,7 @@ access(all) contract ToucanDAO {
             description: description,
             action: action,
             proposalType: ProposalType.FundTreasury,
-            creator: creator,
+            creator: signer.address,
             treasuryAmount: amount,
             treasuryAddress: nil
         )
@@ -423,7 +426,7 @@ access(all) contract ToucanDAO {
         description: String,
         amount: UFix64,
         recipientAddress: Address,
-        creator: Address
+        signer: auth(BorrowValue) &Account
     ) {
         let action = Action(
             actionType: ActionType.ExecuteCustom,
@@ -435,7 +438,7 @@ access(all) contract ToucanDAO {
             description: description,
             action: action,
             proposalType: ProposalType.WithdrawTreasury,
-            creator: creator,
+            creator: signer.address,
             treasuryAmount: amount,
             treasuryAddress: recipientAddress
         )
@@ -446,7 +449,7 @@ access(all) contract ToucanDAO {
         title: String,
         description: String,
         memberAddress: Address,
-        creator: Address
+        signer: auth(BorrowValue) &Account
     ) {
         let action = Action(
             actionType: ActionType.AddMember,
@@ -458,7 +461,7 @@ access(all) contract ToucanDAO {
             description: description,
             action: action,
             proposalType: ProposalType.FundTreasury,  // Using FundTreasury as generic type
-            creator: creator,
+            creator: signer.address,
             treasuryAmount: nil,
             treasuryAddress: nil
         )
@@ -469,7 +472,7 @@ access(all) contract ToucanDAO {
         title: String,
         description: String,
         memberAddress: Address,
-        creator: Address
+        signer: auth(BorrowValue) &Account
     ) {
         let action = Action(
             actionType: ActionType.RemoveMember,
@@ -481,7 +484,7 @@ access(all) contract ToucanDAO {
             description: description,
             action: action,
             proposalType: ProposalType.WithdrawTreasury,  // Using WithdrawTreasury as generic type
-            creator: creator,
+            creator: signer.address,
             treasuryAmount: nil,
             treasuryAddress: nil
         )
@@ -526,14 +529,18 @@ access(all) contract ToucanDAO {
 
         emit ProposalCreated(
             id: proposalId,
-            creator: 0x0,  // Will be set from transaction signer in actual implementation
+            creator: creator,
             title: title
         )
     }
     
     /// Deposit ToucanTokens to activate a pending proposal
     /// Anyone can deposit to activate a proposal for voting
-    access(all) fun depositProposal(proposalId: UInt64, deposit: @ToucanToken.Vault, depositorAddress: Address) {
+    access(all) fun depositProposal(
+        proposalId: UInt64, 
+        deposit: @ToucanToken.Vault,
+        signer: auth(BorrowValue) &Account
+    ) {
         let proposal = self.proposals[proposalId] ?? panic("Proposal does not exist")
         
         assert(
@@ -550,7 +557,7 @@ access(all) contract ToucanDAO {
         )
         
         // Store who made the deposit for refund purposes
-        self.pendingDeposits[proposalId] = depositorAddress
+        self.pendingDeposits[proposalId] = signer.address
         
         // Deposit ToucanTokens
         self.toucanTokenBalance.deposit(from: <-deposit)
@@ -559,12 +566,16 @@ access(all) contract ToucanDAO {
         proposal.setStatus(newStatus: ProposalStatus.Active)
         self.proposals[proposalId] = proposal
         
-        emit ProposalActivated(proposalId: proposalId, depositor: depositorAddress)
+        emit ProposalActivated(proposalId: proposalId, depositor: signer.address)
+        // let's schedule the proposal for exectution , if passed, execute and refund the deposit to the sepositor , if not , refund the deposit and mark the proposal as failed
     }
     
     /// Cancel a proposal and return the ToucanTokens to the depositor
     /// Can only be called by the proposal creator and only if no one has voted
-    access(all) fun cancelProposal(proposalId: UInt64, proposerAddress: Address): @ToucanToken.Vault {
+    access(all) fun cancelProposal(
+        proposalId: UInt64,
+        signer: auth(BorrowValue) &Account
+    ): @ToucanToken.Vault {
         let proposal = self.proposals[proposalId] ?? panic("Proposal does not exist")
         
         // Can cancel Pending or Active proposals
@@ -576,7 +587,7 @@ access(all) contract ToucanDAO {
         
         // Verify caller is the proposer
         assert(
-            proposal.creator == proposerAddress,
+            proposal.creator == signer.address,
             message: "Only the proposal creator can cancel"
         )
         
@@ -638,14 +649,10 @@ access(all) contract ToucanDAO {
 
     /// Vote on a proposal
     access(all) fun vote(
-        
         proposalId: UInt64,
-        vote: Bool  // true for yes, false for no
+        vote: Bool,  // true for yes, false for no
+        signer: auth(BorrowValue) &Account
     ) {
-        
-        // In real implementation, would check caller is a member
-        // In a transaction context, this would use the signer's address
-        
         let proposal = self.proposals[proposalId] 
             ?? panic("Proposal does not exist")
 
@@ -656,18 +663,18 @@ access(all) contract ToucanDAO {
 
         // Check if voter has already voted
         assert(
-            !proposal.hasVoted(address: 0x0),  // In transaction: signer.address
+            !proposal.hasVoted(address: signer.address),
             message: "Voter has already voted on this proposal"
         )
 
         proposal.addVote(isYes: vote)
-        proposal.registerVoter(address: 0x0, vote: vote)  // In transaction: signer.address
+        proposal.registerVoter(address: signer.address, vote: vote)
 
         self.proposals[proposalId] = proposal
 
         emit Voted(
             proposalId: proposalId,
-            voter: 0x0,
+            voter: signer.address,
             vote: vote,
             newYesVotes: proposal.getYesVotes(),
             newNoVotes: proposal.getNoVotes()
@@ -856,5 +863,6 @@ access(all) contract ToucanDAO {
         //     withdrawData.recipient.deposit(from: <-tokens)
         // }
     }
+       
 }
 
