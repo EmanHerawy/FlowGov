@@ -20,6 +20,7 @@ access(all) contract ToucanDAO {
     /// Proposal types for treasury operations
     access(all) enum ProposalType: UInt8 {
         access(all) case WithdrawTreasury // Withdraw tokens from treasury
+        access(all) case AdminBasedOperation
     }
 
     /// Action types that can be executed by proposals
@@ -51,26 +52,23 @@ access(all) contract ToucanDAO {
     /// Data for updating DAO configuration
     access(all) struct UpdateConfigData {
         access(all) let minVoteThreshold: UInt64?
-        access(all) let quorumPercentage: UFix64?
+        access(all) let minimumQuorumNumber: UFix64?
         access(all) let minimumProposalStake: UFix64?
         access(all) let defaultVotingPeriod: UFix64?
         access(all) let defaultCooldownPeriod: UFix64?
-        access(all) let treasuryWithdrawQuorumPercentage: UFix64?  // Specific quorum for treasury withdrawals (default 66.67% = 2/3)
         
         access(all) init(
             minVoteThreshold: UInt64?,
-            quorumPercentage: UFix64?,
+            minimumQuorumNumber: UFix64?,
             minimumProposalStake: UFix64?,
             defaultVotingPeriod: UFix64?,
-            defaultCooldownPeriod: UFix64?,
-            treasuryWithdrawQuorumPercentage: UFix64?
+            defaultCooldownPeriod: UFix64?
         ) {
             self.minVoteThreshold = minVoteThreshold
-            self.quorumPercentage = quorumPercentage
+            self.minimumQuorumNumber = minimumQuorumNumber
             self.minimumProposalStake = minimumProposalStake
             self.defaultVotingPeriod = defaultVotingPeriod
             self.defaultCooldownPeriod = defaultCooldownPeriod
-            self.treasuryWithdrawQuorumPercentage = treasuryWithdrawQuorumPercentage
         }
     }
     
@@ -370,8 +368,7 @@ access(all) contract ToucanDAO {
 
     /// Configuration
     access(all) var minVoteThreshold: UInt64  // Minimum votes required for a proposal to pass
-    access(all) var quorumPercentage: UFix64  // Percentage of members that must vote (default proposals)
-    access(all) var treasuryWithdrawQuorumPercentage: UFix64  // Percentage for treasury withdrawal proposals (default 66.67% = 2/3)
+    access(all) var minimumQuorumNumber: UFix64  // Minimum number of members that must vote (for non-admin proposals)
     access(all) var minimumProposalStake: UFix64  // Minimum ToucanTokens required to create a proposal
     access(all) var defaultVotingPeriod: UFix64  // Default voting period in seconds
     access(all) var defaultCooldownPeriod: UFix64  // Default cooldown period in seconds
@@ -390,8 +387,7 @@ access(all) contract ToucanDAO {
         // Initialize empty ToucanToken vault for deposits
         self.toucanTokenBalance <- ToucanToken.createEmptyVault(vaultType: Type<@ToucanToken.Vault>())
         self.minVoteThreshold = 1  // At least 1 vote required
-        self.quorumPercentage = 50.0  // 50% of members must vote (for default proposals)
-        self.treasuryWithdrawQuorumPercentage = 66.67  // 2/3 of members must vote yes for treasury withdrawals
+        self.minimumQuorumNumber = 3.0  // Minimum number of members that must vote (for non-admin proposals)
         self.minimumProposalStake = 10.0  // 10 ToucanTokens minimum stake
         self.defaultVotingPeriod = 604800.0  // 7 days default
         self.defaultCooldownPeriod = 86400.0  // 1 day default
@@ -410,7 +406,7 @@ access(all) contract ToucanDAO {
     /// Configuration info struct for returning state
     access(all) struct ConfigurationInfo {
         access(all) let minVoteThreshold: UInt64
-        access(all) let quorumPercentage: UFix64
+        access(all) let minimumQuorumNumber: UFix64
         access(all) let minimumProposalStake: UFix64
         access(all) let defaultVotingPeriod: UFix64
         access(all) let defaultCooldownPeriod: UFix64
@@ -421,7 +417,7 @@ access(all) contract ToucanDAO {
         
         init(
             minVoteThreshold: UInt64,
-            quorumPercentage: UFix64,
+            minimumQuorumNumber: UFix64,
             minimumProposalStake: UFix64,
             defaultVotingPeriod: UFix64,
             defaultCooldownPeriod: UFix64,
@@ -431,7 +427,7 @@ access(all) contract ToucanDAO {
             nextProposalId: UInt64
         ) {
             self.minVoteThreshold = minVoteThreshold
-            self.quorumPercentage = quorumPercentage
+            self.minimumQuorumNumber = minimumQuorumNumber
             self.minimumProposalStake = minimumProposalStake
             self.defaultVotingPeriod = defaultVotingPeriod
             self.defaultCooldownPeriod = defaultCooldownPeriod
@@ -446,7 +442,7 @@ access(all) contract ToucanDAO {
     access(all) fun getConfiguration(): ConfigurationInfo {
         return ConfigurationInfo(
             minVoteThreshold: self.minVoteThreshold,
-            quorumPercentage: self.quorumPercentage,
+            minimumQuorumNumber: self.minimumQuorumNumber,
             minimumProposalStake: self.minimumProposalStake,
             defaultVotingPeriod: self.defaultVotingPeriod,
             defaultCooldownPeriod: self.defaultCooldownPeriod,
@@ -537,7 +533,7 @@ access(all) contract ToucanDAO {
             title: title,
             description: description,
             action: action,
-            proposalType: ProposalType.WithdrawTreasury,  // Using WithdrawTreasury as generic type for non-treasury proposals
+            proposalType: ProposalType.AdminBasedOperation,
             creator: signer.address,
             treasuryAmount: nil,
             treasuryAddress: nil
@@ -549,11 +545,10 @@ access(all) contract ToucanDAO {
         title: String,
         description: String,
         minVoteThreshold: UInt64?,
-        quorumPercentage: UFix64?,
+        minimumQuorumNumber: UFix64?,
         minimumProposalStake: UFix64?,
         defaultVotingPeriod: UFix64?,
         defaultCooldownPeriod: UFix64?,
-        treasuryWithdrawQuorumPercentage: UFix64?,
         signer: auth(BorrowValue) &Account
     ) {
         // Require admin member
@@ -563,11 +558,10 @@ access(all) contract ToucanDAO {
             actionType: ActionType.UpdateConfig,
             data: UpdateConfigData(
                 minVoteThreshold: minVoteThreshold,
-                quorumPercentage: quorumPercentage,
+                minimumQuorumNumber: minimumQuorumNumber,
                 minimumProposalStake: minimumProposalStake,
                 defaultVotingPeriod: defaultVotingPeriod,
-                defaultCooldownPeriod: defaultCooldownPeriod,
-                treasuryWithdrawQuorumPercentage: treasuryWithdrawQuorumPercentage
+                defaultCooldownPeriod: defaultCooldownPeriod
             ) as AnyStruct
         )
         
@@ -600,7 +594,7 @@ access(all) contract ToucanDAO {
             title: title,
             description: description,
             action: action,
-            proposalType: ProposalType.WithdrawTreasury,  // Using WithdrawTreasury as generic type for non-treasury proposals
+            proposalType: ProposalType.AdminBasedOperation,
             creator: signer.address,
             treasuryAmount: nil,
             treasuryAddress: nil
@@ -802,7 +796,17 @@ access(all) contract ToucanDAO {
         return <-refund
     }
     
-
+    /// Check if an address has ToucanToken balance > 0
+    access(all) fun hasToucanTokenBalance(address: Address): Bool {
+        let account = getAccount(address)
+        // Try to borrow ToucanToken vault balance reference from public capability
+        // Standard path for FungibleToken vault
+        let capability = account.capabilities.get<&{FungibleToken.Balance}>(ToucanToken.VaultPublicPath)
+        if let vaultRef = capability.borrow() {
+            return vaultRef.balance > 0.0
+        }
+        return false
+    }
 
     /// Vote on a proposal
     access(all) fun vote(
@@ -822,6 +826,11 @@ access(all) contract ToucanDAO {
         assert(
             !proposal.hasVoted(address: signer.address),
             message: "Voter has already voted on this proposal"
+        )
+      // Require voter to have ToucanToken balance > 0
+        assert(
+            self.hasToucanTokenBalance(address: signer.address),
+            message: "Only ToucanToken holders can vote on proposals"
         )
 
         proposal.addVote(isYes: vote)
@@ -874,8 +883,8 @@ access(all) contract ToucanDAO {
         }
         
         // Voting period has ended - calculate result with quorum checking
-        let totalVotes = proposal.getYesVotes() + proposal.getNoVotes()
-        let totalMembers = UInt64(self.members.keys.length)
+        let totalVotes: UInt64 = proposal.getYesVotes() + proposal.getNoVotes()
+        let totalMembers: UInt64 = UInt64(self.members.keys.length)
         
         // Check if proposal has no votes - it's expired
         if totalVotes == 0 {
@@ -883,45 +892,37 @@ access(all) contract ToucanDAO {
         }
         
         // Check quorum and threshold requirements
-        // For treasury withdrawals, use stricter quorum (2/3 = 66.67%)
-        // For other proposals, use default quorum
-        var requiredQuorum: UFix64 = self.quorumPercentage
-        if proposal.proposalType == ProposalType.WithdrawTreasury && proposal.action.actionType == ActionType.ExecuteCustom {
-            requiredQuorum = self.treasuryWithdrawQuorumPercentage
-        }
+        // Admin-based operations require 2/3 of total members to vote
+        // Other proposals require minimumQuorumNumber of members to vote
+        // Both types pass if yesVotes > noVotes after quorum is met
         
         if totalMembers > 0 && totalVotes >= self.minVoteThreshold {
-            let participationPercentage = (UFix64(totalVotes) / UFix64(totalMembers)) * 100.0
+            // Determine required quorum
+            var requiredVotes: UInt64 = 0
+            if proposal.proposalType == ProposalType.AdminBasedOperation {
+                // Admin operations: require 2/3 of total members (with ceiling rounding)
+                let twoThirdsRaw = (UFix64(totalMembers) * 2.0 / 3.0)
+                let twoThirdsInt = UInt64(twoThirdsRaw)
+                if twoThirdsRaw > UFix64(twoThirdsInt) {
+                    requiredVotes = twoThirdsInt + 1  // Round up
+                } else {
+                    requiredVotes = twoThirdsInt
+                }
+            } else {
+                // Non-admin proposals: require minimumQuorumNumber
+                requiredVotes = UInt64(self.minimumQuorumNumber)
+            }
             
-            // For treasury withdrawals, require 2/3 of members to vote yes specifically
-            if proposal.proposalType == ProposalType.WithdrawTreasury 
-                && proposal.action.actionType == ActionType.ExecuteCustom {
-                // For treasury withdrawals: need 2/3 of members to vote yes
-                let yesVotesRequired = (UFix64(totalMembers) * requiredQuorum / 100.0)
-                let yesVotesCount = proposal.getYesVotes()
-                
-                if participationPercentage >= requiredQuorum && yesVotesCount >= UInt64(yesVotesRequired) {
-                    // Check if yes votes are majority
-                    if yesVotesCount > proposal.getNoVotes() {
-                        return ProposalStatus.Passed
-                    } else {
-                        return ProposalStatus.Rejected
-                    }
-                } else {
-                    return ProposalStatus.Rejected
-                }
-            } else {
-                // For other proposals: use standard quorum and majority voting
-                if participationPercentage >= requiredQuorum {
-                if proposal.getYesVotes() > proposal.getNoVotes() {
-                    return ProposalStatus.Passed
-                } else {
-                    return ProposalStatus.Rejected
-                }
-            } else {
-                // Quorum not met
+            // Check if quorum is met
+            if totalVotes < requiredVotes {
                 return ProposalStatus.Rejected
-                }
+            }
+            
+            // Both admin and non-admin proposals: pass if yes > no
+            if proposal.getYesVotes() > proposal.getNoVotes() {
+                return ProposalStatus.Passed
+            } else {
+                return ProposalStatus.Rejected
             }
         } else {
             // Not enough votes to meet minimum threshold
@@ -1084,8 +1085,8 @@ access(all) contract ToucanDAO {
             if configData.minVoteThreshold != nil {
                 self.minVoteThreshold = configData.minVoteThreshold!
             }
-            if configData.quorumPercentage != nil {
-                self.quorumPercentage = configData.quorumPercentage!
+            if configData.minimumQuorumNumber != nil {
+                self.minimumQuorumNumber = configData.minimumQuorumNumber!
             }
             if configData.minimumProposalStake != nil {
                 self.minimumProposalStake = configData.minimumProposalStake!
@@ -1095,9 +1096,6 @@ access(all) contract ToucanDAO {
             }
             if configData.defaultCooldownPeriod != nil {
                 self.defaultCooldownPeriod = configData.defaultCooldownPeriod!
-            }
-            if configData.treasuryWithdrawQuorumPercentage != nil {
-                self.treasuryWithdrawQuorumPercentage = configData.treasuryWithdrawQuorumPercentage!
             }
             
             log("DAO configuration updated successfully")

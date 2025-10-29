@@ -40,7 +40,7 @@ fun testConfigurationValues() {
     
     // Test default configuration values
     Test.assertEqual(UInt64(1), config.minVoteThreshold)
-    Test.assertEqual(50.0, config.quorumPercentage)
+    Test.assertEqual(3.0, config.minimumQuorumNumber)
     Test.assertEqual(10.0, config.minimumProposalStake)
     Test.assertEqual(604800.0, config.defaultVotingPeriod)
     Test.assertEqual(86400.0, config.defaultCooldownPeriod)
