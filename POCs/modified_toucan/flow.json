@@ -12,18 +12,7 @@
 				"testing": "0000000000000007"
 			}
 		},
-		"Counter": {
-			"source": "cadence/contracts/Counter.cdc",
-			"aliases": {
-				"testing": "0000000000000007"
-			}
-		},
-		"CounterTransactionHandler": {
-			"source": "cadence/contracts/CounterTransactionHandler.cdc",
-			"aliases": {
-				"testing": "0000000000000007"
-			}
-		},
+		
 		"Test": {
 			"source": "cadence/contracts/Test.cdc",
 			"aliases": {
@@ -151,9 +140,7 @@
 		"emulator": {
 			"emulator-account": [
 				"ToucanToken",
-				"ToucanDAO",
-				"Counter",
-				"CounterTransactionHandler"
+				"ToucanDAO"
 			]
 		}
 	}
