@@ -74,6 +74,17 @@ access(all) contract ToucanDAO {
         }
     }
     
+    /// Information about a proposal deposit - tracks depositor and amount
+    access(all) struct ProposalDeposit {
+        access(all) let depositorAddress: Address
+        access(all) let depositAmount: UFix64
+        
+        access(all) init(depositorAddress: Address, depositAmount: UFix64) {
+            self.depositorAddress = depositorAddress
+            self.depositAmount = depositAmount
+        }
+    }
+    
     /// Data for treasury withdrawal operations
     access(all) struct WithdrawTreasuryData {
         access(all) let vaultType: Type  // Token type to withdraw (e.g., Type<@FlowToken.Vault>)
@@ -354,8 +365,7 @@ access(all) contract ToucanDAO {
     access(all) var members: {Address: Bool}  // Map of member addresses
     access(self) var stakedFundsResource: @StakedFunds
     access(self) var treasury: @Treasury
-    access(self) var proposerStakes: {UInt64: UFix64}  // Map of proposal ID to staked amount
-    access(self) var pendingDeposits: {UInt64: Address}  // Map of proposal ID to depositor address
+    access(self) var pendingDeposits: {UInt64: ProposalDeposit}  // Map of proposal ID to deposit info (depositor address and amount)
     access(self) var toucanTokenBalance: @ToucanToken.Vault  // Balance of ToucanToken for deposits
 
     /// Configuration
@@ -376,7 +386,6 @@ access(all) contract ToucanDAO {
         )
         // Create empty treasury
         self.treasury <- create Treasury()
-        self.proposerStakes = {}
         self.pendingDeposits = {}
         // Initialize empty ToucanToken vault for deposits
         self.toucanTokenBalance <- ToucanToken.createEmptyVault(vaultType: Type<@ToucanToken.Vault>())
@@ -608,8 +617,6 @@ access(all) contract ToucanDAO {
         treasuryAmount: UFix64?,
         treasuryAddress: Address?
     ) {
-        let stakedAmount = 0.0
-        
         let proposalId = self.nextProposalId
         self.nextProposalId = self.nextProposalId + 1
         
@@ -626,13 +633,12 @@ access(all) contract ToucanDAO {
             proposalType: proposalType,
             votingPeriod: voting,
             cooldownPeriod: cooldown,
-            stakedAmount: stakedAmount,
+            stakedAmount: self.minimumProposalStake,  // Use global config value
             treasuryAmount: treasuryAmount,
             treasuryAddress: treasuryAddress
         )
 
         // Don't deposit tokens yet - proposal starts as Pending
-        self.proposerStakes[proposalId] = stakedAmount
         self.proposals[proposalId] = proposal
 
         emit ProposalCreated(
@@ -656,16 +662,19 @@ access(all) contract ToucanDAO {
             message: "Proposal is not pending - cannot deposit"
         )
         
-        let stakeAmount = self.proposerStakes[proposalId] ?? panic("Proposal stake not found")
+        let requiredStake = self.minimumProposalStake  // Use global DAO config value
         let depositAmount = deposit.balance
         
         assert(
-            depositAmount >= stakeAmount,
-            message: "Insufficient deposit amount"
+            depositAmount >= requiredStake,
+            message: "Insufficient deposit amount. Required: ".concat(requiredStake.toString()).concat(", Provided: ").concat(depositAmount.toString())
         )
         
-        // Store who made the deposit for refund purposes
-        self.pendingDeposits[proposalId] = signer.address
+        // Store depositor address and actual deposit amount for refund purposes
+        self.pendingDeposits[proposalId] = ProposalDeposit(
+            depositorAddress: signer.address,
+            depositAmount: depositAmount
+        )
         
         // Deposit ToucanTokens
         self.toucanTokenBalance.deposit(from: <-deposit)
@@ -778,19 +787,17 @@ access(all) contract ToucanDAO {
             )
         }
         
-        // Get the stake amount
-        let stakeAmount = self.proposerStakes[proposalId] ?? panic("Proposal stake not found")
-        self.proposerStakes[proposalId] = nil
+        // Get deposit info (address and amount)
+        let depositInfo = self.pendingDeposits[proposalId] ?? panic("No deposit found for proposal")
+        let depositorAddress = depositInfo.depositorAddress
+        let depositAmount = depositInfo.depositAmount
+        self.pendingDeposits[proposalId] = nil
         
         // Mark proposal as cancelled
         self.updateProposalStatus(proposalId: proposalId, newStatus: ProposalStatus.Cancelled)
         
-        // Refund ToucanTokens to the depositor
-        let depositorAddress = self.pendingDeposits[proposalId] ?? panic("No deposit found for proposal")
-        self.pendingDeposits[proposalId] = nil
-        
-        // Withdraw and return the ToucanTokens
-        let refund <- self.toucanTokenBalance.withdraw(amount: stakeAmount)
+        // Withdraw and return the ToucanTokens (refund full deposit amount)
+        let refund <- self.toucanTokenBalance.withdraw(amount: depositAmount)
         
         return <-refund
     }
@@ -945,11 +952,11 @@ access(all) contract ToucanDAO {
     access(contract) fun executeProposal(proposalId: UInt64):@ToucanToken.Vault {
         let proposal = self.proposals[proposalId]
             ?? panic("Proposal does not exist")
-        let stakeAmount = self.proposerStakes[proposalId] ?? panic("Proposal stake not found")
 
-   
         let status = self.getStatus(proposalId: proposalId)
-        let depositorAddress = self.pendingDeposits[proposalId] ?? panic("No deposit found for proposal")
+        let depositInfo = self.pendingDeposits[proposalId] ?? panic("No deposit found for proposal")
+        let depositorAddress = depositInfo.depositorAddress
+        let depositAmount = depositInfo.depositAmount
 
         assert(
            status != ProposalStatus.Executed,
@@ -973,24 +980,24 @@ access(all) contract ToucanDAO {
 
         emit ProposalExecuted(id: proposalId)
             
-            // Withdraw and return the ToucanTokens to depositor
-            let refund <- self.toucanTokenBalance.withdraw(amount: stakeAmount)
+            // Withdraw and return the ToucanTokens to depositor (refund full deposit amount)
+            let refund <- self.toucanTokenBalance.withdraw(amount: depositAmount)
             
             return <-refund
             
         } else if status == ProposalStatus.Rejected {
             self.updateProposalStatus(proposalId: proposalId, newStatus: ProposalStatus.Rejected)
             
-            // Withdraw and return the ToucanTokens to depositor (proposal rejected)
-            let refund <- self.toucanTokenBalance.withdraw(amount: stakeAmount)
+            // Withdraw and return the ToucanTokens to depositor (proposal rejected - refund full deposit amount)
+            let refund <- self.toucanTokenBalance.withdraw(amount: depositAmount)
             
             return <-refund
             
         } else if status == ProposalStatus.Expired {
             self.updateProposalStatus(proposalId: proposalId, newStatus: ProposalStatus.Expired)
             
-            // Withdraw and return the ToucanTokens to depositor (proposal expired)
-            let refund <- self.toucanTokenBalance.withdraw(amount: stakeAmount)
+            // Withdraw and return the ToucanTokens to depositor (proposal expired - refund full deposit amount)
+            let refund <- self.toucanTokenBalance.withdraw(amount: depositAmount)
             
             return <-refund
         } else {
