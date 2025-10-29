@@ -26,7 +26,7 @@ fun testReadConfiguration() {
     let memberCount = ToucanDAO.getMemberCount()
     Test.assertEqual(UInt64(0), memberCount)
     
-    let treasuryBalance = ToucanDAO.getTreasuryBalance()
+    let treasuryBalance = ToucanDAO.getTreasuryBalance(vaultType: Type<@FlowToken.Vault>())
     Test.assertEqual(0.0, treasuryBalance)
     
     let stakedBalance = ToucanDAO.getStakedFundsBalance()

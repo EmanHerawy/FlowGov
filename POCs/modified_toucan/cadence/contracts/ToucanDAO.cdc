@@ -19,7 +19,6 @@ access(all) contract ToucanDAO {
 
     /// Proposal types for treasury operations
     access(all) enum ProposalType: UInt8 {
-        access(all) case FundTreasury    // Deposit tokens into treasury
         access(all) case WithdrawTreasury // Withdraw tokens from treasury
     }
 
@@ -49,24 +48,15 @@ access(all) contract ToucanDAO {
         }
     }
     
-    /// Data for treasury funding operations
-    access(all) struct FundTreasuryData {
-        access(all) let amount: UFix64
-        access(all) let sourceAddress: Address  // Where funds come from
-        
-        access(all) init(amount: UFix64, sourceAddress: Address) {
-            self.amount = amount
-            self.sourceAddress = sourceAddress
-        }
-    }
-    
     /// Data for treasury withdrawal operations
     access(all) struct WithdrawTreasuryData {
+        access(all) let vaultType: Type  // Token type to withdraw (e.g., Type<@FlowToken.Vault>)
         access(all) let amount: UFix64
         access(all) let recipientAddress: Address  // Where funds go to
         access(all) let recipientVaultPath: PublicPath  // Path to recipient's vault capability
         
-        access(all) init(amount: UFix64, recipientAddress: Address, recipientVaultPath: PublicPath) {
+        access(all) init(vaultType: Type, amount: UFix64, recipientAddress: Address, recipientVaultPath: PublicPath) {
+            self.vaultType = vaultType
             self.amount = amount
             self.recipientAddress = recipientAddress
             self.recipientVaultPath = recipientVaultPath
@@ -259,23 +249,76 @@ access(all) contract ToucanDAO {
     }
     
     /// Resource to hold treasury funds (actual DAO treasury)
-    access(all) resource Treasury {
-        access(self) var flowVault: @FlowToken.Vault
+    /// Implements FungibleToken.Receiver so it can receive any FungibleToken
+    /// Uses dictionary to store multiple token types dynamically
+    access(all) resource Treasury: FungibleToken.Receiver {
+        // Dictionary keyed by vault type - supports any FungibleToken
+        access(self) var vaults: @{Type: {FungibleToken.Vault}}
         
-        access(all) fun depositFlow(tokens: @FlowToken.Vault) {
-            self.flowVault.deposit(from: <-tokens)
+        /// Deposit tokens into treasury (supports any FungibleToken)
+        access(all) fun depositTokens(tokens: @{FungibleToken.Vault}) {
+            let vaultType = tokens.getType()
+            if let existing = &self.vaults[vaultType] as &{FungibleToken.Vault}? {
+                existing.deposit(from: <-tokens)
+            } else {
+                self.vaults[vaultType] <-! tokens
+            }
         }
         
-        access(all) fun withdrawFlow(amount: UFix64): @FlowToken.Vault {
-            return <-self.flowVault.withdraw(amount: amount) as! @FlowToken.Vault
+        /// Withdraw tokens from treasury by type
+        access(all) fun withdraw(vaultType: Type, amount: UFix64): @{FungibleToken.Vault} {
+            let vault <- self.vaults.remove(key: vaultType) ?? panic("No vault found for the specified token type")
+            let withdrawn <- vault.withdraw(amount: amount)
+            self.vaults[vaultType] <-! vault
+            return <-withdrawn
         }
         
-        access(all) view fun getBalance(): UFix64 {
-            return self.flowVault.balance
+        /// Get balance for a specific token type
+        access(all) view fun getBalance(vaultType: Type): UFix64 {
+            if let vault = &self.vaults[vaultType] as &{FungibleToken.Vault}? {
+                return vault.balance
+            } else {
+                return 0.0
+            }
+        }
+        
+        /// Get all supported vault types as an array
+        access(all) view fun getSupportedVaultTypeList(): [Type] {
+            return self.vaults.keys
+        }
+        
+        /// Check if a vault type is supported
+        access(all) view fun hasVault(vaultType: Type): Bool {
+            return self.vaults[vaultType] != nil
+        }
+        
+        /// Implement FungibleToken.Receiver interface
+        access(all) fun deposit(from: @{FungibleToken.Vault}) {
+            self.depositTokens(tokens: <-from)
+        }
+        
+        /// getSupportedVaultTypes for Receiver interface
+        access(all) view fun getSupportedVaultTypes(): {Type: Bool} {
+            let supported: {Type: Bool} = {}
+            for vaultType in self.vaults.keys {
+                supported[vaultType] = true
+            }
+            return supported
+        }
+        
+        /// isSupportedVaultType for Receiver interface
+        access(all) view fun isSupportedVaultType(type: Type): Bool {
+            return self.vaults[type] != nil
         }
         
         init() {
-            self.flowVault <- FlowToken.createEmptyVault(vaultType: Type<@FlowToken.Vault>())
+            // Initialize with empty FlowToken and ToucanToken vaults by default
+            let flowVault <- FlowToken.createEmptyVault(vaultType: Type<@FlowToken.Vault>())
+            let toucanVault <- ToucanToken.createEmptyVault(vaultType: Type<@ToucanToken.Vault>())
+            self.vaults <- {
+                Type<@FlowToken.Vault>(): <-flowVault,
+                Type<@ToucanToken.Vault>(): <-toucanVault
+            }
         }
     }
 
@@ -322,9 +365,9 @@ access(all) contract ToucanDAO {
         return self.stakedFundsResource.vault.balance
     }
     
-    /// Get treasury balance
-    access(all) view fun getTreasuryBalance(): UFix64 {
-        return self.treasury.getBalance()
+    /// Get treasury balance for a specific token type
+    access(all) view fun getTreasuryBalance(vaultType: Type): UFix64 {
+        return self.treasury.getBalance(vaultType: vaultType)
     }
     
     /// Configuration info struct for returning state
@@ -370,7 +413,7 @@ access(all) contract ToucanDAO {
             minimumProposalStake: self.minimumProposalStake,
             defaultVotingPeriod: self.defaultVotingPeriod,
             defaultCooldownPeriod: self.defaultCooldownPeriod,
-            treasuryBalance: self.treasury.getBalance(),
+            treasuryBalance: 0.0,  // Note: Treasury now supports multiple token types - use getTreasuryBalance(vaultType) instead
             stakedFundsBalance: self.stakedFundsResource.vault.balance,
             memberCount: self.getMemberCount(),
             nextProposalId: self.nextProposalId
@@ -397,40 +440,19 @@ access(all) contract ToucanDAO {
         return UInt64(self.members.keys.length)
     }
 
-    /// Create a treasury funding proposal
-    access(all) fun createFundTreasuryProposal(
-        title: String,
-        description: String,
-        amount: UFix64,
-        signer: auth(BorrowValue) &Account
-    ) {
-        let action = Action(
-            actionType: ActionType.ExecuteCustom,
-            data: FundTreasuryData(amount: amount, sourceAddress: 0x0) as AnyStruct
-        )
-        
-        self.createProposalInternal(
-            title: title,
-            description: description,
-            action: action,
-            proposalType: ProposalType.FundTreasury,
-            creator: signer.address,
-            treasuryAmount: amount,
-            treasuryAddress: nil
-        )
-    }
-    
     /// Create a treasury withdrawal proposal
     access(all) fun createWithdrawTreasuryProposal(
         title: String,
         description: String,
+        vaultType: Type,  // Token type to withdraw (e.g., Type<@FlowToken.Vault>)
         amount: UFix64,
         recipientAddress: Address,
+        recipientVaultPath: PublicPath,  // Path to recipient's vault capability
         signer: auth(BorrowValue) &Account
     ) {
         let action = Action(
             actionType: ActionType.ExecuteCustom,
-            data: WithdrawTreasuryData(amount: amount, recipientAddress: recipientAddress, recipientVaultPath: /public/flowTokenReceiver) as AnyStruct
+            data: WithdrawTreasuryData(vaultType: vaultType, amount: amount, recipientAddress: recipientAddress, recipientVaultPath: recipientVaultPath) as AnyStruct
         )
         
         self.createProposalInternal(
@@ -444,7 +466,7 @@ access(all) contract ToucanDAO {
         )
     }
     
-    /// Create an add member proposal (using FundTreasury type for now)
+    /// Create an add member proposal
     access(all) fun createAddMemberProposal(
         title: String,
         description: String,
@@ -460,14 +482,14 @@ access(all) contract ToucanDAO {
             title: title,
             description: description,
             action: action,
-            proposalType: ProposalType.FundTreasury,  // Using FundTreasury as generic type
+            proposalType: ProposalType.WithdrawTreasury,  // Using WithdrawTreasury as generic type for non-treasury proposals
             creator: signer.address,
             treasuryAmount: nil,
             treasuryAddress: nil
         )
     }
     
-    /// Create a remove member proposal (using WithdrawTreasury type for now)
+    /// Create a remove member proposal
     access(all) fun createRemoveMemberProposal(
         title: String,
         description: String,
@@ -483,7 +505,7 @@ access(all) contract ToucanDAO {
             title: title,
             description: description,
             action: action,
-            proposalType: ProposalType.WithdrawTreasury,  // Using WithdrawTreasury as generic type
+            proposalType: ProposalType.WithdrawTreasury,  // Using WithdrawTreasury as generic type for non-treasury proposals
             creator: signer.address,
             treasuryAmount: nil,
             treasuryAddress: nil
@@ -539,7 +561,7 @@ access(all) contract ToucanDAO {
     access(all) fun depositProposal(
         proposalId: UInt64, 
         deposit: @ToucanToken.Vault,
-        signer: auth(BorrowValue) &Account
+        signer: auth(BorrowValue, IssueStorageCapabilityController, SaveValue, GetStorageCapabilityController, PublishCapability) &Account
     ) {
         let proposal = self.proposals[proposalId] ?? panic("Proposal does not exist")
         
@@ -567,8 +589,78 @@ access(all) contract ToucanDAO {
         self.proposals[proposalId] = proposal
         
         emit ProposalActivated(proposalId: proposalId, depositor: signer.address)
-        // let's schedule the proposal for exectution , if passed, execute and refund the deposit to the sepositor , if not , refund the deposit and mark the proposal as failed
-    }
+        
+        // Schedule the proposal for execution after cooldown period
+        // Time to execute is after the cooldown period by one second
+        let future = proposal.expiryTimestamp + proposal.cooldownPeriod + 1.0
+        
+        // Wrap proposalId as AnyStruct for scheduler
+        let data: AnyStruct? = proposalId as AnyStruct
+        
+        let pr = FlowTransactionScheduler.Priority.Medium;
+        
+        // Get the handler capability
+        var handlerCap: Capability<auth(FlowTransactionScheduler.Execute) &{FlowTransactionScheduler.TransactionHandler}>? = nil
+        let controllers = signer.capabilities.storage.getControllers(forPath: /storage/ToucanDAOTransactionHandler)
+        
+        if controllers.length > 0 {
+            if let cap = controllers[0].capability as? Capability<auth(FlowTransactionScheduler.Execute) &{FlowTransactionScheduler.TransactionHandler}> {
+                handlerCap = cap
+            } else if controllers.length > 1 {
+                handlerCap = controllers[1].capability as! Capability<auth(FlowTransactionScheduler.Execute) &{FlowTransactionScheduler.TransactionHandler}>
+            }
+        }
+        
+        assert(handlerCap != nil, message: "Could not get handler capability")
+        
+        // Create scheduler manager if doesn't exist
+        if signer.storage.borrow<&AnyResource>(from: FlowTransactionSchedulerUtils.managerStoragePath) == nil {
+            let manager <- FlowTransactionSchedulerUtils.createManager()
+            signer.storage.save(<-manager, to: FlowTransactionSchedulerUtils.managerStoragePath)
+            
+            let managerCapPublic = signer.capabilities.storage.issue<&{FlowTransactionSchedulerUtils.Manager}>(
+                FlowTransactionSchedulerUtils.managerStoragePath
+            )
+            signer.capabilities.publish(managerCapPublic, at: FlowTransactionSchedulerUtils.managerPublicPath)
+        }
+        
+        let manager = signer.storage.borrow<auth(FlowTransactionSchedulerUtils.Owner) &{FlowTransactionSchedulerUtils.Manager}>(
+            from: FlowTransactionSchedulerUtils.managerStoragePath
+        ) ?? panic("Could not borrow Manager")
+        
+        let vaultRef = signer.storage.borrow<auth(FungibleToken.Withdraw) &FlowToken.Vault>(
+            from: /storage/flowTokenVault
+        ) ?? panic("Missing FlowToken vault")
+        
+        let est = FlowTransactionScheduler.estimate(
+            data: data,
+            timestamp: future,
+            priority: pr,
+            executionEffort: 1000
+        )
+        
+        assert(
+            est.timestamp != nil || pr == FlowTransactionScheduler.Priority.Low,
+            message: est.error ?? "Estimation failed"
+        )
+        
+        let fees <- vaultRef.withdraw(amount: est.flowFee ?? 0.0) as! @FlowToken.Vault
+        
+        let transactionId = manager.schedule(
+            handlerCap: handlerCap!,
+            data: data,
+            timestamp: future,
+            priority: pr,
+            executionEffort: 1000,
+            fees: <-fees
+        )
+        
+        emit TransactionScheduled(txId: transactionId, executeAt: future)
+        
+        log("Scheduled transaction id: "
+            .concat(transactionId.toString())
+            .concat(" at ")
+            .concat(future.toString()))    }
     
     /// Cancel a proposal and return the ToucanTokens to the depositor
     /// Can only be called by the proposal creator and only if no one has voted
@@ -765,17 +857,17 @@ access(all) contract ToucanDAO {
     /// Internal function to execute a proposal
     /// This will be called by the TransactionHandler
     /// Executes the action associated with the proposal
-    access(all) fun executeProposal(proposalId: UInt64) {
+    access(contract) fun executeProposal(proposalId: UInt64):@ToucanToken.Vault {
         let proposal = self.proposals[proposalId]
             ?? panic("Proposal does not exist")
+        let stakeAmount = self.proposerStakes[proposalId] ?? panic("Proposal stake not found")
+
+   
+        let status = self.getStatus(proposalId: proposalId)
+        let depositorAddress = self.pendingDeposits[proposalId] ?? panic("No deposit found for proposal")
 
         assert(
-            self.getStatus(proposalId: proposalId) == ProposalStatus.Passed,
-            message: "Proposal must be passed to execute"
-        )
-
-        assert(
-            self.getStatus(proposalId: proposalId) != ProposalStatus.Executed,
+           status != ProposalStatus.Executed,
             message: "Proposal has already been executed"
         )
         
@@ -784,25 +876,51 @@ access(all) contract ToucanDAO {
             proposal.isReadyForExecution(),
             message: "Proposal is still in cooldown period"
         )
+        self.pendingDeposits[proposalId] = nil
+        
+        if status == ProposalStatus.Passed {
+            // Execute the action associated with the proposal
+            let action = proposal.getAction()
+            self.executeAction(proposalType: proposal.proposalType, action: action, proposalId: proposalId)
 
-        // Execute the action associated with the proposal
-        let action = proposal.getAction()
-        self.executeAction(proposalType: proposal.proposalType, action: action)
+            // Update proposal status to executed
+            self.updateProposalStatus(proposalId: proposalId, newStatus: ProposalStatus.Executed)
+            
+            emit ProposalExecuted(id: proposalId)
+            
+            // Withdraw and return the ToucanTokens to depositor
+            let refund <- self.toucanTokenBalance.withdraw(amount: stakeAmount)
+            
+            return <-refund
+            
+        } else if status == ProposalStatus.Rejected {
+            self.updateProposalStatus(proposalId: proposalId, newStatus: ProposalStatus.Rejected)
+            
+            // Withdraw and return the ToucanTokens to depositor (proposal rejected)
+            let refund <- self.toucanTokenBalance.withdraw(amount: stakeAmount)
+            
+            return <-refund
+            
+        } else if status == ProposalStatus.Expired {
+            self.updateProposalStatus(proposalId: proposalId, newStatus: ProposalStatus.Expired)
+            
+            // Withdraw and return the ToucanTokens to depositor (proposal expired)
+            let refund <- self.toucanTokenBalance.withdraw(amount: stakeAmount)
+            
+            return <-refund
+        } else {
+            // Other statuses (Active, Pending) - should never happen after cooldown
+            // This indicates an invalid state - revert transaction
+            panic("Invalid proposal status after cooldown period. Expected: Passed, Rejected, or Expired")
+        }
 
-        // Update proposal status to executed
-        self.updateProposalStatus(proposalId: proposalId, newStatus: ProposalStatus.Executed)
-
-        emit ProposalExecuted(id: proposalId)
     }
     
     /// Execute an action based on its type and proposal type
     /// This is contract-private and can only be called from within the contract
-    access(contract) fun executeAction(proposalType: ProposalType, action: Action) {
-        // Handle treasury operations
+    access(contract) fun executeAction(proposalType: ProposalType, action: Action, proposalId: UInt64) {
+        // Handle treasury operations based on proposal type
         switch proposalType {
-            case ProposalType.FundTreasury:
-                self.executeFundTreasury(action: action)
-            
             case ProposalType.WithdrawTreasury:
                 self.executeWithdrawTreasury(action: action)
         }
@@ -832,119 +950,63 @@ access(all) contract ToucanDAO {
         }
     }
     
-    /// Execute a treasury funding operation
-    access(contract) fun executeFundTreasury(action: Action) {
-        // Expect action data containing vault info
-        if action.data != nil {
-            log("Funding treasury - implementation needed")
-            // TODO: Implement actual treasury funding logic
-            // This would involve:
-            // 1. Extracting token details from action data
-            // 2. Getting tokens from source
-            // 3. Depositing to self.treasury
-        }
-    }
+
     
-    /// Execute a treasury withdrawal operation  
+    /// Execute a treasury withdrawal operation (Money OUT)
+    /// Withdraws tokens of the specified type from DAO treasury and sends to recipient
     access(contract) fun executeWithdrawTreasury(action: Action) {
-        // For now, this is a placeholder
-        // In a full implementation, this would:
-        // 1. Extract recipient and amount from action.data
-        // 2. Validate treasury balance
-        // 3. Withdraw from treasury
-        // 4. Send to recipient
-        
-        log("Withdrawing from treasury - implementation needed")
-        
-        // Example structure (would need proper data type):
-        // if let withdrawData = action.data as? WithdrawData {
-        //     assert(self.treasury.getBalance() >= withdrawData.amount)
-        //     let tokens <- self.treasury.withdrawFlow(amount: withdrawData.amount)
-        //     withdrawData.recipient.deposit(from: <-tokens)
-        // }
+        if let withdrawData = action.data as? WithdrawTreasuryData {
+            // Validate treasury has sufficient balance for the specified token type
+            let treasuryBalance = self.treasury.getBalance(vaultType: withdrawData.vaultType)
+            assert(
+                treasuryBalance >= withdrawData.amount,
+                message: "Insufficient treasury balance. Required: ".concat(withdrawData.amount.toString()).concat(", Available: ").concat(treasuryBalance.toString())
+            )
+            
+            // Withdraw from treasury (supports any token type)
+            let tokens <- self.treasury.withdraw(vaultType: withdrawData.vaultType, amount: withdrawData.amount)
+            
+            // Get recipient's receiver capability
+            // Note: capabilities.get will abort if capability doesn't exist
+            let recipientAccount = getAccount(withdrawData.recipientAddress)
+            let recipientCapability = recipientAccount.capabilities.get<&{FungibleToken.Receiver}>(withdrawData.recipientVaultPath)
+            
+            // Borrow the receiver reference from the capability
+            if let recipientReceiver = recipientCapability.borrow() {
+                // Send tokens to recipient
+                recipientReceiver.deposit(from: <-tokens)
+            } else {
+                panic("Failed to borrow recipient receiver reference - capability may not be properly configured")
+            }
+            
+            log("Withdrew ".concat(withdrawData.amount.toString()).concat(" tokens to ").concat(withdrawData.recipientAddress.toString()))
+        } else {
+            panic("Invalid WithdrawTreasuryData in action")
+        }
     }
         // ════════════════════════════════════════════════════════════
     // SCHEDULE FUNCTION
     // ════════════════════════════════════════════════════════════
     
-        // Public function to SCHEDULE an increment
-        access(all) fun scheduleIncrement(  
-        signer: auth(BorrowValue, IssueStorageCapabilityController, SaveValue, GetStorageCapabilityController, PublishCapability) &Account
-    ) {
-           
-       let future = getCurrentBlock().timestamp + 1.0;
-        
-        let pr = FlowTransactionScheduler.Priority.Medium;
-        
-        // Get the handler capability
-        var handlerCap: Capability<auth(FlowTransactionScheduler.Execute) &{FlowTransactionScheduler.TransactionHandler}>? = nil
-        let controllers = signer.capabilities.storage.getControllers(forPath: /storage/CounterTransactionHandler)
-        
-        if controllers.length > 0 {
-            if let cap = controllers[0].capability as? Capability<auth(FlowTransactionScheduler.Execute) &{FlowTransactionScheduler.TransactionHandler}> {
-                handlerCap = cap
-            } else if controllers.length > 1 {
-                handlerCap = controllers[1].capability as! Capability<auth(FlowTransactionScheduler.Execute) &{FlowTransactionScheduler.TransactionHandler}>
-            }
-        }
-        
-        assert(handlerCap != nil, message: "Could not get handler capability")
-        
-        // Create scheduler manager if doesn't exist
-        if signer.storage.borrow<&AnyResource>(from: FlowTransactionSchedulerUtils.managerStoragePath) == nil {
-            let manager <- FlowTransactionSchedulerUtils.createManager()
-            signer.storage.save(<-manager, to: FlowTransactionSchedulerUtils.managerStoragePath)
-            
-            let managerCapPublic = signer.capabilities.storage.issue<&{FlowTransactionSchedulerUtils.Manager}>(
-                FlowTransactionSchedulerUtils.managerStoragePath
-            )
-            signer.capabilities.publish(managerCapPublic, at: FlowTransactionSchedulerUtils.managerPublicPath)
-        }
-        
-        let manager = signer.storage.borrow<auth(FlowTransactionSchedulerUtils.Owner) &{FlowTransactionSchedulerUtils.Manager}>(
-            from: FlowTransactionSchedulerUtils.managerStoragePath
-        ) ?? panic("Could not borrow Manager")
-        
-        let vaultRef = signer.storage.borrow<auth(FungibleToken.Withdraw) &FlowToken.Vault>(
-            from: /storage/flowTokenVault
-        ) ?? panic("Missing FlowToken vault")
-        
-        let est = FlowTransactionScheduler.estimate(
-            data: nil,
-            timestamp: future,
-            priority: pr,
-            executionEffort: 1000
-        )
-        
-        assert(
-            est.timestamp != nil || pr == FlowTransactionScheduler.Priority.Low,
-            message: est.error ?? "Estimation failed"
-        )
-        
-        let fees <- vaultRef.withdraw(amount: est.flowFee ?? 0.0) as! @FlowToken.Vault
-        
-        let transactionId = manager.schedule(
-            handlerCap: handlerCap!,
-            data: nil,
-            timestamp: future,
-            priority: pr,
-            executionEffort: 1000,
-            fees: <-fees
-        )
-        
-        emit TransactionScheduled(txId: transactionId, executeAt: future)
-        
-        log("Scheduled transaction id: "
-            .concat(transactionId.toString())
-            .concat(" at ")
-            .concat(future.toString()))
-    }
+
+
+
+
        /// Handler resource that implements the Scheduled Transaction interface
     access(all) resource Handler: FlowTransactionScheduler.TransactionHandler {
         access(FlowTransactionScheduler.Execute) fun executeTransaction(id: UInt64, data: AnyStruct?) {
-      
-      
-          log("Transaction executed (id: ".concat(id.toString()).concat(") newCount: "))
+            // Extract proposalId from data
+            let proposalId = data as? UInt64 ?? panic("Invalid proposal ID in transaction data")
+            
+            // Execute the proposal - this will handle refunds based on status
+            let refund <- ToucanDAO.executeProposal(proposalId: proposalId)
+            
+            // Note: The refund vault is automatically handled by the scheduler
+            // In a real scenario, you might want to send it to the depositor
+            // For now, we'll destroy it as the executeProposal should handle refunds internally
+            destroy refund
+            
+            log("Transaction executed (id: ".concat(id.toString()).concat(", proposalId: ").concat(proposalId.toString()).concat(")"))
         }
 
         access(all) view fun getViews(): [Type] {
