@@ -950,7 +950,8 @@ access(all) contract ToucanDAO {
     /// Internal function to execute a proposal
     /// This will be called by the TransactionHandler
     /// Executes the action associated with the proposal
-    access(contract) fun executeProposal(proposalId: UInt64):@ToucanToken.Vault {
+    /// Refunds the depositor directly for all statuses (Passed, Rejected, Expired)
+    access(contract) fun executeProposal(proposalId: UInt64) {
         let proposal = self.proposals[proposalId]
             ?? panic("Proposal does not exist")
 
@@ -972,41 +973,39 @@ access(all) contract ToucanDAO {
         self.pendingDeposits[proposalId] = nil
 
         if status == ProposalStatus.Passed {
-        // Execute the action associated with the proposal
-        let action = proposal.getAction()
+            // Execute the action associated with the proposal
+            let action = proposal.getAction()
             self.executeAction(proposalType: proposal.proposalType, action: action, proposalId: proposalId)
 
-        // Update proposal status to executed
-        self.updateProposalStatus(proposalId: proposalId, newStatus: ProposalStatus.Executed)
+            // Update proposal status to executed
+            self.updateProposalStatus(proposalId: proposalId, newStatus: ProposalStatus.Executed)
 
-        emit ProposalExecuted(id: proposalId)
-            
-            // Withdraw and return the ToucanTokens to depositor (refund full deposit amount)
-            let refund <- self.toucanTokenBalance.withdraw(amount: depositAmount)
-            
-            return <-refund
-            
+            emit ProposalExecuted(id: proposalId)
         } else if status == ProposalStatus.Rejected {
             self.updateProposalStatus(proposalId: proposalId, newStatus: ProposalStatus.Rejected)
-            
-            // Withdraw and return the ToucanTokens to depositor (proposal rejected - refund full deposit amount)
-            let refund <- self.toucanTokenBalance.withdraw(amount: depositAmount)
-            
-            return <-refund
-            
         } else if status == ProposalStatus.Expired {
             self.updateProposalStatus(proposalId: proposalId, newStatus: ProposalStatus.Expired)
-            
-            // Withdraw and return the ToucanTokens to depositor (proposal expired - refund full deposit amount)
-            let refund <- self.toucanTokenBalance.withdraw(amount: depositAmount)
-            
-            return <-refund
         } else {
             // Other statuses (Active, Pending) - should never happen after cooldown
             // This indicates an invalid state - revert transaction
             panic("Invalid proposal status after cooldown period. Expected: Passed, Rejected, or Expired")
         }
-
+        
+        // Refund depositor directly for all statuses (Passed, Rejected, Expired)
+        let depositorAccount = getAccount(depositorAddress)
+        let receiverCap = depositorAccount.capabilities.get<&{FungibleToken.Receiver}>(
+            ToucanToken.ReceiverPublicPath
+        )
+        
+        if let receiver = receiverCap.borrow() {
+            let refund <- self.toucanTokenBalance.withdraw(amount: depositAmount)
+            receiver.deposit(from: <-refund)
+            log("Refunded ".concat(depositAmount.toString()).concat(" ToucanTokens to depositor: ").concat(depositorAddress.toString()))
+        } else {
+            // If depositor's receiver is not available, this is a critical error
+            // The tokens will remain in the contract - they should not be destroyed
+            panic("Cannot refund depositor - ToucanToken receiver not found at address: ".concat(depositorAddress.toString()))
+        }
     }
     
     /// Execute an action based on its type and proposal type
@@ -1117,13 +1116,8 @@ access(all) contract ToucanDAO {
             // Extract proposalId from data
             let proposalId = data as? UInt64 ?? panic("Invalid proposal ID in transaction data")
             
-            // Execute the proposal - this will handle refunds based on status
-            let refund <- ToucanDAO.executeProposal(proposalId: proposalId)
-            
-            // Note: The refund vault is automatically handled by the scheduler
-            // In a real scenario, you might want to send it to the depositor
-            // For now, we'll destroy it as the executeProposal should handle refunds internally
-            destroy refund
+            // Execute the proposal - refund is automatically sent to depositor
+            ToucanDAO.executeProposal(proposalId: proposalId)
             
             log("Transaction executed (id: ".concat(id.toString()).concat(", proposalId: ").concat(proposalId.toString()).concat(")"))
         }
