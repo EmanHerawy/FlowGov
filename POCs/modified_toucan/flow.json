@@ -6,6 +6,12 @@
 				"testing": "0000000000000007"
 			}
 		},
+		"ToucanToken": {
+			"source": "cadence/contracts/ToucanToken.cdc",
+			"aliases": {
+				"testing": "0000000000000007"
+			}
+		},
 		"Counter": {
 			"source": "cadence/contracts/Counter.cdc",
 			"aliases": {
@@ -14,6 +20,12 @@
 		},
 		"CounterTransactionHandler": {
 			"source": "cadence/contracts/CounterTransactionHandler.cdc",
+			"aliases": {
+				"testing": "0000000000000007"
+			}
+		},
+		"Test": {
+			"source": "cadence/contracts/Test.cdc",
 			"aliases": {
 				"testing": "0000000000000007"
 			}
@@ -138,6 +150,7 @@
 	"deployments": {
 		"emulator": {
 			"emulator-account": [
+				"ToucanToken",
 				"ToucanDAO",
 				"Counter",
 				"CounterTransactionHandler"
