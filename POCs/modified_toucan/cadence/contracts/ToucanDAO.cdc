@@ -449,12 +449,12 @@ access(all) contract ToucanDAO {
     }
 
     /// Add a member to the DAO
-    access(all) fun addMember(address: Address) {
+    access(contract) fun addMember(address: Address) {
         self.members[address] = true
     }
 
     /// Remove a member from the DAO
-    access(all) fun removeMember(address: Address) {
+    access(contract) fun removeMember(address: Address) {
         self.members[address] = nil
     }
 
@@ -475,6 +475,18 @@ access(all) contract ToucanDAO {
             self.isAdminMember(address: signer.address),
             message: "Only admin members can create this type of proposal"
         )
+    }
+    
+    /// Check if an address has ToucanToken balance > 0
+    access(all) fun hasToucanTokenBalance(address: Address): Bool {
+        let account = getAccount(address)
+        // Try to borrow ToucanToken vault balance reference from public capability
+        // Standard path for FungibleToken vault
+        let capability = account.capabilities.get<&{FungibleToken.Balance}>(ToucanToken.VaultPublicPath)
+        if let vaultRef = capability.borrow() {
+            return vaultRef.balance > 0.0
+        }
+        return false
     }
 
     /// Get the number of members
@@ -795,37 +807,9 @@ access(all) contract ToucanDAO {
         return <-refund
     }
     
-    /// Execute a proposal and optionally slash stake if execution fails
-    /// Returns the ToucanTokens if successful, otherwise they are burned
-    access(all) fun finalizeProposal(proposalId: UInt64, success: Bool): @ToucanToken.Vault {
-        let proposal = self.proposals[proposalId] ?? panic("Proposal does not exist")
-        
-        assert(
-            self.getStatus(proposalId: proposalId) == ProposalStatus.Passed,
-            message: "Proposal must be passed to finalize"
-        )
-        
-        let stakeAmount = self.proposerStakes[proposalId] ?? 0.0
-        self.proposerStakes[proposalId] = nil
-        
-        // Get the depositor address
-        let depositorAddress = self.pendingDeposits[proposalId] ?? panic("No deposit found for proposal")
-        self.pendingDeposits[proposalId] = nil
-        
-        // Withdraw ToucanTokens from balance
-        let refund <- self.toucanTokenBalance.withdraw(amount: stakeAmount)
-        
-        if success {
-            // Return ToucanTokens on successful execution
-            return <-refund
-        } else {
-            // Slash stake on failed execution (burn the tokens)
-            destroy refund
-            return <-ToucanToken.createEmptyVault(vaultType: Type<@ToucanToken.Vault>())
-        }
-    }
 
-    /// Vote on a proposal
+
+    /// Vote on a proposal (only ToucanToken holders can vote)
     access(all) fun vote(
         proposalId: UInt64,
         vote: Bool,  // true for yes, false for no
@@ -837,6 +821,12 @@ access(all) contract ToucanDAO {
         assert(
             self.getStatus(proposalId: proposalId) == ProposalStatus.Active,
             message: "Proposal is not active"
+        )
+
+        // Require voter to have ToucanToken balance > 0
+        assert(
+            self.hasToucanTokenBalance(address: signer.address),
+            message: "Only ToucanToken holders can vote on proposals"
         )
 
         // Check if voter has already voted
