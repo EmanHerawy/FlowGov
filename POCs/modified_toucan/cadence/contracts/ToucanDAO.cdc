@@ -476,18 +476,6 @@ access(all) contract ToucanDAO {
             message: "Only admin members can create this type of proposal"
         )
     }
-    
-    /// Check if an address has ToucanToken balance > 0
-    access(all) fun hasToucanTokenBalance(address: Address): Bool {
-        let account = getAccount(address)
-        // Try to borrow ToucanToken vault balance reference from public capability
-        // Standard path for FungibleToken vault
-        let capability = account.capabilities.get<&{FungibleToken.Balance}>(ToucanToken.VaultPublicPath)
-        if let vaultRef = capability.borrow() {
-            return vaultRef.balance > 0.0
-        }
-        return false
-    }
 
     /// Get the number of members
     access(all) fun getMemberCount(): UInt64 {
@@ -809,7 +797,7 @@ access(all) contract ToucanDAO {
     
 
 
-    /// Vote on a proposal (only ToucanToken holders can vote)
+    /// Vote on a proposal
     access(all) fun vote(
         proposalId: UInt64,
         vote: Bool,  // true for yes, false for no
@@ -821,12 +809,6 @@ access(all) contract ToucanDAO {
         assert(
             self.getStatus(proposalId: proposalId) == ProposalStatus.Active,
             message: "Proposal is not active"
-        )
-
-        // Require voter to have ToucanToken balance > 0
-        assert(
-            self.hasToucanTokenBalance(address: signer.address),
-            message: "Only ToucanToken holders can vote on proposals"
         )
 
         // Check if voter has already voted
