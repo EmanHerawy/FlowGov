@@ -1,3 +1,29 @@
+
+## Overview
+This is a Cadence smart contract for a DAO (Decentralized Autonomous Organization) on Flow blockchain with proposal-based governance, treasury management, and scheduled execution capabilities.
+
+
+1. **Comprehensive Proposal System**
+   - Multiple proposal types (treasury withdrawal, member management, config updates)
+   -  status lifecycle (Pending → Active → Passed/Rejected → Executed)
+   - Cooldown periods for execution safety
+
+2. **Multi-Token Treasury Support**
+   - Dynamic vault storage supporting any FungibleToken
+   - Properly implements FungibleToken.Receiver interface
+   - Type-safe token operations
+
+3. **Flexible Governance**
+   - Configurable quorum percentages
+   - Different thresholds for treasury vs. standard proposals (66.67% vs 50%)
+   - ToucanToken holder voting rights
+
+4. **Scheduled Execution**
+   - Integration with FlowTransactionScheduler
+   - Automatic execution after cooldown periods
+
+
+
 # Scheduled Transactions Demo: Increment the Counter
 
 This example shows how to schedule a transaction that increments the `Counter` in the near future and verify it on the Flow Emulator using the scheduler manager.
