@@ -3,7 +3,7 @@ import "ToucanToken"
 transaction(amount: UFix64) {
     let minter: &ToucanToken.Minter
     
-    prepare(admin: AuthAccount) {
+    prepare(admin: auth(BorrowValue) &Account) {
         self.minter = admin.storage.borrow<&ToucanToken.Minter>(from: /storage/ToucanTokenAdmin)!
     }
     
