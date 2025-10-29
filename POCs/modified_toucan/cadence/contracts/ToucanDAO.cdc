@@ -1,16 +1,18 @@
 import "FlowToken"
 import "FungibleToken"
+import "ToucanToken"
 
 access(all) contract ToucanDAO {
 
     /// Proposal status
     access(all) enum ProposalStatus: UInt8 {
-        access(all) case Active
-        access(all) case Passed
-        access(all) case Rejected
-        access(all) case Executed
-        access(all) case Cancelled
-        access(all) case Expired
+        access(all) case Pending    // Created but not yet deposited
+        access(all) case Active      // Deposited and voting is open
+        access(all) case Passed      // Voting ended with majority yes
+        access(all) case Rejected    // Voting ended with majority no or quorum not met
+        access(all) case Executed    // Proposal has been executed
+        access(all) case Cancelled    // Cancelled by proposer
+        access(all) case Expired     // Voting period ended with no votes
     }
 
     /// Proposal types for treasury operations
@@ -128,10 +130,12 @@ access(all) contract ToucanDAO {
         }
         
         access(contract) fun setStatus(newStatus: ProposalStatus) {
-            // Only allow setting Cancelled and Executed status - others are calculated dynamically
+            // Only allow setting Pending, Cancelled, and Executed status - others are calculated dynamically
             assert(
-                newStatus == ProposalStatus.Cancelled || newStatus == ProposalStatus.Executed,
-                message: "Only Cancelled and Executed status can be set - other statuses are calculated dynamically"
+                newStatus == ProposalStatus.Pending || 
+                newStatus == ProposalStatus.Cancelled || 
+                newStatus == ProposalStatus.Executed,
+                message: "Only Pending, Cancelled, and Executed status can be set - other statuses are calculated dynamically"
             )
             self.status = newStatus
         }
@@ -171,7 +175,7 @@ access(all) contract ToucanDAO {
             self.treasuryAmount = treasuryAmount
             self.treasuryAddress = treasuryAddress
             self.expiryTimestamp = getCurrentBlock().timestamp + votingPeriod
-            self.status = ProposalStatus.Active  // Initial status, will be calculated dynamically
+            self.status = ProposalStatus.Pending  // Initial status - waiting for deposit
             self.yesVotes = 0
             self.noVotes = 0
             self.executionTimestamp = nil
@@ -216,6 +220,11 @@ access(all) contract ToucanDAO {
         title: String
     )
 
+    access(all) event ProposalActivated(
+        proposalId: UInt64,
+        depositor: Address
+    )
+
     access(all) event Voted(
         proposalId: UInt64,
         voter: Address,
@@ -237,7 +246,7 @@ access(all) contract ToucanDAO {
         id: UInt64
     )
 
-    /// Resource to hold staked FLOW tokens
+    /// Resource to hold staked funds (deprecated - no longer used)
     access(all) resource StakedFunds {
         access(all) var vault: @FlowToken.Vault
         
@@ -274,11 +283,13 @@ access(all) contract ToucanDAO {
     access(self) var stakedFundsResource: @StakedFunds
     access(self) var treasury: @Treasury
     access(self) var proposerStakes: {UInt64: UFix64}  // Map of proposal ID to staked amount
+    access(self) var pendingDeposits: {UInt64: Address}  // Map of proposal ID to depositor address
+    access(self) var toucanTokenBalance: @ToucanToken.Vault  // Balance of ToucanToken for deposits
 
     /// Configuration
     access(all) let minVoteThreshold: UInt64  // Minimum votes required for a proposal to pass
     access(all) let quorumPercentage: UFix64  // Percentage of members that must vote
-    access(all) let minimumProposalStake: UFix64  // Minimum FLOW tokens required to create a proposal
+    access(all) let minimumProposalStake: UFix64  // Minimum ToucanTokens required to create a proposal
     access(all) let defaultVotingPeriod: UFix64  // Default voting period in seconds
     access(all) let defaultCooldownPeriod: UFix64  // Default cooldown period in seconds
 
@@ -293,9 +304,12 @@ access(all) contract ToucanDAO {
         // Create empty treasury
         self.treasury <- create Treasury()
         self.proposerStakes = {}
+        self.pendingDeposits = {}
+        // Initialize empty ToucanToken vault for deposits
+        self.toucanTokenBalance <- ToucanToken.createEmptyVault(vaultType: Type<@ToucanToken.Vault>())
         self.minVoteThreshold = 1  // At least 1 vote required
         self.quorumPercentage = 50.0  // 50% of members must vote
-        self.minimumProposalStake = 10.0  // 10 FLOW minimum stake
+        self.minimumProposalStake = 10.0  // 10 ToucanTokens minimum stake
         self.defaultVotingPeriod = 604800.0  // 7 days default
         self.defaultCooldownPeriod = 86400.0  // 1 day default
     }
@@ -385,23 +399,21 @@ access(all) contract ToucanDAO {
         title: String,
         description: String,
         amount: UFix64,
-        creator: Address,
-        stake: @FlowToken.Vault
-    ): @FlowToken.Vault {
+        creator: Address
+    ) {
         let action = Action(
             actionType: ActionType.ExecuteCustom,
             data: FundTreasuryData(amount: amount, sourceAddress: 0x0) as AnyStruct
         )
         
-        return <-self.createProposalInternal(
+        self.createProposalInternal(
             title: title,
             description: description,
             action: action,
             proposalType: ProposalType.FundTreasury,
             creator: creator,
             treasuryAmount: amount,
-            treasuryAddress: nil,
-            stake: <-stake
+            treasuryAddress: nil
         )
     }
     
@@ -411,23 +423,21 @@ access(all) contract ToucanDAO {
         description: String,
         amount: UFix64,
         recipientAddress: Address,
-        creator: Address,
-        stake: @FlowToken.Vault
-    ): @FlowToken.Vault {
+        creator: Address
+    ) {
         let action = Action(
             actionType: ActionType.ExecuteCustom,
             data: WithdrawTreasuryData(amount: amount, recipientAddress: recipientAddress, recipientVaultPath: /public/flowTokenReceiver) as AnyStruct
         )
         
-        return <-self.createProposalInternal(
+        self.createProposalInternal(
             title: title,
             description: description,
             action: action,
             proposalType: ProposalType.WithdrawTreasury,
             creator: creator,
             treasuryAmount: amount,
-            treasuryAddress: recipientAddress,
-            stake: <-stake
+            treasuryAddress: recipientAddress
         )
     }
     
@@ -436,23 +446,21 @@ access(all) contract ToucanDAO {
         title: String,
         description: String,
         memberAddress: Address,
-        creator: Address,
-        stake: @FlowToken.Vault
-    ): @FlowToken.Vault {
+        creator: Address
+    ) {
         let action = Action(
             actionType: ActionType.AddMember,
             data: AddMemberData(address: memberAddress) as AnyStruct
         )
         
-        return <-self.createProposalInternal(
+        self.createProposalInternal(
             title: title,
             description: description,
             action: action,
             proposalType: ProposalType.FundTreasury,  // Using FundTreasury as generic type
             creator: creator,
             treasuryAmount: nil,
-            treasuryAddress: nil,
-            stake: <-stake
+            treasuryAddress: nil
         )
     }
     
@@ -461,23 +469,21 @@ access(all) contract ToucanDAO {
         title: String,
         description: String,
         memberAddress: Address,
-        creator: Address,
-        stake: @FlowToken.Vault
-    ): @FlowToken.Vault {
+        creator: Address
+    ) {
         let action = Action(
             actionType: ActionType.RemoveMember,
             data: RemoveMemberData(address: memberAddress) as AnyStruct
         )
         
-        return <-self.createProposalInternal(
+        self.createProposalInternal(
             title: title,
             description: description,
             action: action,
             proposalType: ProposalType.WithdrawTreasury,  // Using WithdrawTreasury as generic type
             creator: creator,
             treasuryAmount: nil,
-            treasuryAddress: nil,
-            stake: <-stake
+            treasuryAddress: nil
         )
     }
     
@@ -489,16 +495,9 @@ access(all) contract ToucanDAO {
         proposalType: ProposalType,
         creator: Address,
         treasuryAmount: UFix64?,
-        treasuryAddress: Address?,
-        stake: @FlowToken.Vault
-    ): @FlowToken.Vault {
-        let stakedAmount = stake.balance
-        
-        // Validate stake amount
-        assert(
-            stakedAmount >= self.minimumProposalStake,
-            message: "Insufficient stake. Minimum required: ".concat(self.minimumProposalStake.toString())
-        )
+        treasuryAddress: Address?
+    ) {
+        let stakedAmount = 0.0
         
         let proposalId = self.nextProposalId
         self.nextProposalId = self.nextProposalId + 1
@@ -521,8 +520,7 @@ access(all) contract ToucanDAO {
             treasuryAddress: treasuryAddress
         )
 
-        // Actually deposit the staked FLOW tokens
-        self.stakedFundsResource.vault.deposit(from: <-stake)
+        // Don't deposit tokens yet - proposal starts as Pending
         self.proposerStakes[proposalId] = stakedAmount
         self.proposals[proposalId] = proposal
 
@@ -531,19 +529,49 @@ access(all) contract ToucanDAO {
             creator: 0x0,  // Will be set from transaction signer in actual implementation
             title: title
         )
-
-        // Return empty vault (tokens were deposited)
-        return <-FlowToken.createEmptyVault(vaultType: Type<@FlowToken.Vault>())
     }
     
-    /// Cancel a proposal and return the actual staked FLOW tokens
-    /// Can only be called by the proposal creator and only if no one has voted
-    access(all) fun cancelProposal(proposalId: UInt64, proposerAddress: Address): @FlowToken.Vault {
+    /// Deposit ToucanTokens to activate a pending proposal
+    /// Anyone can deposit to activate a proposal for voting
+    access(all) fun depositProposal(proposalId: UInt64, deposit: @ToucanToken.Vault, depositorAddress: Address) {
         let proposal = self.proposals[proposalId] ?? panic("Proposal does not exist")
         
         assert(
-            self.getStatus(proposalId: proposalId) == ProposalStatus.Active,
-            message: "Can only cancel active proposals"
+            self.getStatus(proposalId: proposalId) == ProposalStatus.Pending,
+            message: "Proposal is not pending - cannot deposit"
+        )
+        
+        let stakeAmount = self.proposerStakes[proposalId] ?? panic("Proposal stake not found")
+        let depositAmount = deposit.balance
+        
+        assert(
+            depositAmount >= stakeAmount,
+            message: "Insufficient deposit amount"
+        )
+        
+        // Store who made the deposit for refund purposes
+        self.pendingDeposits[proposalId] = depositorAddress
+        
+        // Deposit ToucanTokens
+        self.toucanTokenBalance.deposit(from: <-deposit)
+        
+        // Update proposal status to Active
+        proposal.setStatus(newStatus: ProposalStatus.Active)
+        self.proposals[proposalId] = proposal
+        
+        emit ProposalActivated(proposalId: proposalId, depositor: depositorAddress)
+    }
+    
+    /// Cancel a proposal and return the ToucanTokens to the depositor
+    /// Can only be called by the proposal creator and only if no one has voted
+    access(all) fun cancelProposal(proposalId: UInt64, proposerAddress: Address): @ToucanToken.Vault {
+        let proposal = self.proposals[proposalId] ?? panic("Proposal does not exist")
+        
+        // Can cancel Pending or Active proposals
+        let status = self.getStatus(proposalId: proposalId)
+        assert(
+            status == ProposalStatus.Pending || status == ProposalStatus.Active,
+            message: "Can only cancel pending or active proposals"
         )
         
         // Verify caller is the proposer
@@ -552,28 +580,35 @@ access(all) contract ToucanDAO {
             message: "Only the proposal creator can cancel"
         )
         
-        // Check if anyone has voted
-        let totalVotes = proposal.getYesVotes() + proposal.getNoVotes()
-        assert(
-            totalVotes == 0,
-            message: "Cannot cancel proposal that has received votes"
-        )
+        // If Active, check if anyone has voted
+        if status == ProposalStatus.Active {
+            let totalVotes = proposal.getYesVotes() + proposal.getNoVotes()
+            assert(
+                totalVotes == 0,
+                message: "Cannot cancel proposal that has received votes"
+            )
+        }
         
-        // Refund the actual staked tokens
+        // Get the stake amount
         let stakeAmount = self.proposerStakes[proposalId] ?? panic("Proposal stake not found")
         self.proposerStakes[proposalId] = nil
         
         // Mark proposal as cancelled
         self.updateProposalStatus(proposalId: proposalId, newStatus: ProposalStatus.Cancelled)
         
-        // Withdraw and return the staked tokens
-        let refund <- self.stakedFundsResource.vault.withdraw(amount: stakeAmount) as! @FlowToken.Vault
+        // Refund ToucanTokens to the depositor
+        let depositorAddress = self.pendingDeposits[proposalId] ?? panic("No deposit found for proposal")
+        self.pendingDeposits[proposalId] = nil
+        
+        // Withdraw and return the ToucanTokens
+        let refund <- self.toucanTokenBalance.withdraw(amount: stakeAmount)
+        
         return <-refund
     }
     
     /// Execute a proposal and optionally slash stake if execution fails
-    /// Returns the staked tokens if successful, otherwise they are burned
-    access(all) fun finalizeProposal(proposalId: UInt64, success: Bool): @FlowToken.Vault {
+    /// Returns the ToucanTokens if successful, otherwise they are burned
+    access(all) fun finalizeProposal(proposalId: UInt64, success: Bool): @ToucanToken.Vault {
         let proposal = self.proposals[proposalId] ?? panic("Proposal does not exist")
         
         assert(
@@ -584,15 +619,20 @@ access(all) contract ToucanDAO {
         let stakeAmount = self.proposerStakes[proposalId] ?? 0.0
         self.proposerStakes[proposalId] = nil
         
+        // Get the depositor address
+        let depositorAddress = self.pendingDeposits[proposalId] ?? panic("No deposit found for proposal")
+        self.pendingDeposits[proposalId] = nil
+        
+        // Withdraw ToucanTokens from balance
+        let refund <- self.toucanTokenBalance.withdraw(amount: stakeAmount)
+        
         if success {
-            // Refund stake on successful execution
-            let refund <- self.stakedFundsResource.vault.withdraw(amount: stakeAmount) as! @FlowToken.Vault
+            // Return ToucanTokens on successful execution
             return <-refund
         } else {
             // Slash stake on failed execution (burn the tokens)
-            let slashed <- self.stakedFundsResource.vault.withdraw(amount: stakeAmount) as! @FlowToken.Vault
-            destroy slashed
-            return <-FlowToken.createEmptyVault(vaultType: Type<@FlowToken.Vault>())
+            destroy refund
+            return <-ToucanToken.createEmptyVault(vaultType: Type<@ToucanToken.Vault>())
         }
     }
 
@@ -656,6 +696,9 @@ access(all) contract ToucanDAO {
         }
         if storedStatus == ProposalStatus.Executed {
             return ProposalStatus.Executed
+        }
+        if storedStatus == ProposalStatus.Pending {
+            return ProposalStatus.Pending
         }
         
         // Check if voting period has ended using expiryTimestamp
