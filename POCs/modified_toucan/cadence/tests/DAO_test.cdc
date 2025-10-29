@@ -4,6 +4,12 @@ import "FlowToken"
 
 access(all)
 fun setup() {
+           let token_err = Test.deployContract(
+        name: "ToucanToken",
+        path: "../contracts/ToucanToken.cdc",
+        arguments: []
+    )
+    Test.expect(token_err, Test.beNil())
     let err = Test.deployContract(
         name: "ToucanDAO",
         path: "../contracts/ToucanDAO.cdc",
