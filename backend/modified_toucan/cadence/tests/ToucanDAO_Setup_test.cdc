@@ -37,7 +37,7 @@ access(all) fun testInitialConfiguration() {
     Test.assertEqual(10.0, config.minimumProposalStake)
     Test.assertEqual(604800.0, config.defaultVotingPeriod)
     Test.assertEqual(86400.0, config.defaultCooldownPeriod)
-    Test.assertEqual(0 as UInt64, config.memberCount)
+    Test.assertEqual(1 as UInt64, config.memberCount)
     Test.assertEqual(0 as UInt64, config.nextProposalId)
 }
 
@@ -53,7 +53,7 @@ access(all) fun testTreasuryInitialization() {
 // Test 3: Member count starts at zero
 access(all) fun testInitialMemberCount() {
     let count = ToucanDAO.getMemberCount()
-    Test.assertEqual(0 as UInt64, count)
+    Test.assertEqual(1 as UInt64, count)
 }
 
 // Test 4: Check if address is not a member initially

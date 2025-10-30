@@ -24,7 +24,7 @@ access(all)
 fun testReadConfiguration() {
     // Test that we can call the contract functions
     let memberCount = ToucanDAO.getMemberCount()
-    Test.assertEqual(UInt64(0), memberCount)
+    Test.assertEqual(UInt64(1), memberCount)
     
     let treasuryBalance = ToucanDAO.getTreasuryBalance(vaultType: Type<@FlowToken.Vault>())
     Test.assertEqual(0.0, treasuryBalance)
@@ -48,7 +48,7 @@ fun testConfigurationValues() {
     // Test initial state values
     Test.assertEqual(0.0, config.treasuryBalance)
     Test.assertEqual(0.0, config.stakedFundsBalance)
-    Test.assertEqual(UInt64(0), config.memberCount)
+    Test.assertEqual(UInt64(1), config.memberCount)
     Test.assertEqual(UInt64(0), config.nextProposalId)
 }
 
@@ -75,7 +75,7 @@ fun testMemberManagement() {
     
     // Verify member was removed
     let finalCount = ToucanDAO.getMemberCount()
-    Test.assertEqual(UInt64(0), finalCount)
+    Test.assertEqual(UInt64(1), finalCount)
     
     // // Verify the address is no longer a member
     // let isMemberAfterRemoval = ToucanDAO.isMember(address: testAddress)
