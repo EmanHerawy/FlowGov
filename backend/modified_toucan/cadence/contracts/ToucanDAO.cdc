@@ -391,6 +391,8 @@ access(all) contract ToucanDAO {
         self.minimumProposalStake = 10.0  // 10 ToucanTokens minimum stake
         self.defaultVotingPeriod = 604800.0  // 7 days default
         self.defaultCooldownPeriod = 86400.0  // 1 day default
+        // Add deployer as the first DAO member for bootstrap
+        self.members[self.account.address] = true
     }
     
     /// Get total staked funds balance
