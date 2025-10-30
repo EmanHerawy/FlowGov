@@ -76,10 +76,20 @@ access(all) contract ToucanDAO {
     access(all) struct ProposalDeposit {
         access(all) let depositorAddress: Address
         access(all) let depositAmount: UFix64
+        access(self) var isRefunded: Bool
         
         access(all) init(depositorAddress: Address, depositAmount: UFix64) {
             self.depositorAddress = depositorAddress
             self.depositAmount = depositAmount
+            self.isRefunded = false
+        }
+
+        access(all) view fun wasRefunded(): Bool {
+            return self.isRefunded
+        }
+
+        access(contract) fun markRefunded() {
+            self.isRefunded = true
         }
     }
     
@@ -138,13 +148,13 @@ access(all) contract ToucanDAO {
         access(all) view fun getExecutionTimestamp(): UFix64? {
             return self.executionTimestamp
         }
-        access(self) var voters: {Address: Bool}  // Map of voter to whether they voted yes (true) or no (false)
+        access(all) var voters: {Address: Bool}  // Map of voter to whether they voted yes (true) or no (false)
         
         access(all) view fun hasVoted(address: Address): Bool {
             return self.voters[address] != nil
         }
         
-        access(all) fun addVote(isYes: Bool) {
+        access(contract) fun addVote(isYes: Bool) {
             if isYes {
                 self.yesVotes = self.yesVotes + 1
             } else {
@@ -152,22 +162,16 @@ access(all) contract ToucanDAO {
             }
         }
         
-        access(all) fun registerVoter(address: Address, vote: Bool) {
+        access(contract) fun registerVoter(address: Address, vote: Bool) {
             self.voters[address] = vote
         }
         
         access(contract) fun setStatus(newStatus: ProposalStatus) {
-            // Only allow setting Pending, Cancelled, and Executed status - others are calculated dynamically
-            assert(
-                newStatus == ProposalStatus.Pending || 
-                newStatus == ProposalStatus.Cancelled || 
-                newStatus == ProposalStatus.Executed,
-                message: "Only Pending, Cancelled, and Executed status can be set - other statuses are calculated dynamically"
-            )
+
             self.status = newStatus
         }
         
-        access(all) fun setExecutionTimestamp(timestamp: UFix64?) {
+        access(contract) fun setExecutionTimestamp(timestamp: UFix64?) {
             self.executionTimestamp = timestamp
         }
         
@@ -291,7 +295,7 @@ access(all) contract ToucanDAO {
         access(self) var vaults: @{Type: {FungibleToken.Vault}}
         
         /// Deposit tokens into treasury (supports any FungibleToken)
-        access(all) fun depositTokens(tokens: @{FungibleToken.Vault}) {
+        access(contract) fun depositTokens(tokens: @{FungibleToken.Vault}) {
             let vaultType = tokens.getType()
             if let existing = &self.vaults[vaultType] as &{FungibleToken.Vault}? {
                 existing.deposit(from: <-tokens)
@@ -301,7 +305,7 @@ access(all) contract ToucanDAO {
         }
         
         /// Withdraw tokens from treasury by type
-        access(all) fun withdraw(vaultType: Type, amount: UFix64): @{FungibleToken.Vault} {
+        access(contract) fun withdraw(vaultType: Type, amount: UFix64): @{FungibleToken.Vault} {
             let vault <- self.vaults.remove(key: vaultType) ?? panic("No vault found for the specified token type")
             let withdrawn <- vault.withdraw(amount: amount)
             self.vaults[vaultType] <-! vault
@@ -758,7 +762,7 @@ access(all) contract ToucanDAO {
     access(all) fun cancelProposal(
         proposalId: UInt64,
         signer: auth(BorrowValue) &Account
-    ): @ToucanToken.Vault {
+    ) {
         let proposal = self.proposals[proposalId] ?? panic("Proposal does not exist")
         
         // Can cancel Pending or Active proposals
@@ -785,17 +789,31 @@ access(all) contract ToucanDAO {
         
         // Get deposit info (address and amount)
         let depositInfo = self.pendingDeposits[proposalId] ?? panic("No deposit found for proposal")
+        assert(!depositInfo.wasRefunded(), message: "Deposit already refunded")
         let depositorAddress = depositInfo.depositorAddress
         let depositAmount = depositInfo.depositAmount
-        self.pendingDeposits[proposalId] = nil
         
         // Mark proposal as cancelled
         self.updateProposalStatus(proposalId: proposalId, newStatus: ProposalStatus.Cancelled)
         
-        // Withdraw and return the ToucanTokens (refund full deposit amount)
-        let refund <- self.toucanTokenBalance.withdraw(amount: depositAmount)
+        // // Withdraw and return the ToucanTokens (refund full deposit amount)
+        let depositorAccount = getAccount(depositorAddress)
+        let receiverCap = depositorAccount.capabilities.get<&{FungibleToken.Receiver}>(
+            ToucanToken.ReceiverPublicPath
+        )
         
-        return <-refund
+        if let receiver = receiverCap.borrow() {
+            let refund <- self.toucanTokenBalance.withdraw(amount: depositAmount)
+            receiver.deposit(from: <-refund)
+            log("Refunded ".concat(depositAmount.toString()).concat(" ToucanTokens to depositor: ").concat(depositorAddress.toString()))
+            var updated = depositInfo
+            updated.markRefunded()
+            self.pendingDeposits[proposalId] = updated
+        } else {
+            // If depositor's receiver is not available, this is a critical error
+            // The tokens will remain in the contract - they should not be destroyed
+            panic("Cannot refund depositor - ToucanToken receiver not found at address: ".concat(depositorAddress.toString()))
+        }
     }
     
     /// Check if an address has ToucanToken balance > 0
@@ -953,12 +971,13 @@ access(all) contract ToucanDAO {
     /// This will be called by the TransactionHandler
     /// Executes the action associated with the proposal
     /// Refunds the depositor directly for all statuses (Passed, Rejected, Expired)
-    access(contract) fun executeProposal(proposalId: UInt64) {
+    access(self) fun executeProposal(proposalId: UInt64) {
         let proposal = self.proposals[proposalId]
             ?? panic("Proposal does not exist")
 
         let status = self.getStatus(proposalId: proposalId)
         let depositInfo = self.pendingDeposits[proposalId] ?? panic("No deposit found for proposal")
+        assert(!depositInfo.wasRefunded(), message: "Deposit already refunded")
         let depositorAddress = depositInfo.depositorAddress
         let depositAmount = depositInfo.depositAmount
 
@@ -972,7 +991,7 @@ access(all) contract ToucanDAO {
             proposal.isReadyForExecution(),
             message: "Proposal is still in cooldown period"
         )
-        self.pendingDeposits[proposalId] = nil
+        // Do not remove deposit info; mark refunded after successful transfer
 
         if status == ProposalStatus.Passed {
             // Execute the action associated with the proposal
@@ -1003,6 +1022,9 @@ access(all) contract ToucanDAO {
             let refund <- self.toucanTokenBalance.withdraw(amount: depositAmount)
             receiver.deposit(from: <-refund)
             log("Refunded ".concat(depositAmount.toString()).concat(" ToucanTokens to depositor: ").concat(depositorAddress.toString()))
+            var updated = depositInfo
+            updated.markRefunded()
+            self.pendingDeposits[proposalId] = updated
         } else {
             // If depositor's receiver is not available, this is a critical error
             // The tokens will remain in the contract - they should not be destroyed
@@ -1012,7 +1034,7 @@ access(all) contract ToucanDAO {
     
     /// Execute an action based on its type and proposal type
     /// This is contract-private and can only be called from within the contract
-    access(contract) fun executeAction(proposalType: ProposalType, action: Action, proposalId: UInt64) {
+    access(self) fun executeAction(proposalType: ProposalType, action: Action, proposalId: UInt64) {
         // Handle treasury operations based on proposal type
         switch proposalType {
             case ProposalType.WithdrawTreasury:
@@ -1048,7 +1070,7 @@ access(all) contract ToucanDAO {
     
     /// Execute a treasury withdrawal operation (Money OUT)
     /// Withdraws tokens of the specified type from DAO treasury and sends to recipient
-    access(contract) fun executeWithdrawTreasury(action: Action) {
+    access(self) fun executeWithdrawTreasury(action: Action) {
         if let withdrawData = action.data as? WithdrawTreasuryData {
             // Validate treasury has sufficient balance for the specified token type
             let treasuryBalance = self.treasury.getBalance(vaultType: withdrawData.vaultType)
@@ -1078,9 +1100,9 @@ access(all) contract ToucanDAO {
             panic("Invalid WithdrawTreasuryData in action")
         }
     }
-    
+    /**   */
     /// Execute a configuration update operation
-    access(contract) fun executeUpdateConfig(action: Action) {
+    access(self) fun executeUpdateConfig(action: Action) {
         if let configData = action.data as? UpdateConfigData {
             // Update configuration values if provided
             if configData.minVoteThreshold != nil {
