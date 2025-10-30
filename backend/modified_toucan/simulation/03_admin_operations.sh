@@ -2,8 +2,22 @@
 
 # Admin Operations Simulation
 # Tests admin-only operations: Add Member, Remove Member, Update Config
+#
+# Usage: ./03_admin_operations.sh [NETWORK] [SIGNER]
+#   NETWORK: emulator (default), mainnet, or testnet
+#   SIGNER: account name from flow.json (default: emulator-account)
 
 set -e
+
+# Parse arguments
+NETWORK="${1:-emulator}"
+SIGNER="${2:-emulator-account}"
+
+# Validate network
+if [[ ! "$NETWORK" =~ ^(emulator|mainnet|testnet)$ ]]; then
+    echo "Error: Invalid network '$NETWORK'. Must be: emulator, mainnet, or testnet"
+    exit 1
+fi
 
 GREEN='\033[0;32m'
 BLUE='\033[0;34m'
@@ -13,8 +27,12 @@ NC='\033[0m'
 
 echo -e "${GREEN}=== Admin Operations Simulation ===${NC}"
 echo ""
+echo -e "${BLUE}Configuration:${NC}"
+echo "  Network: ${NETWORK}"
+echo "  Signer: ${SIGNER}"
+echo ""
 
-ADMIN="emulator-account"
+ADMIN="$SIGNER"
 
 # First, we need to make the admin account a member
 echo -e "${BLUE}[Step 1]${NC} Adding admin as a member (via contract call)..."
@@ -27,7 +45,7 @@ flow transactions send cadence/transactions/CreateAddMemberProposal.cdc \
   "Proposal to add a new member to the DAO" \
   0x01 \
   --signer $ADMIN \
-  --network emulator
+  --network $NETWORK
 
 PROPOSAL_ID=0
 
@@ -36,7 +54,7 @@ flow transactions send cadence/transactions/DepositProposal.cdc \
   $PROPOSAL_ID \
   50.0 \
   --signer $ADMIN \
-  --network emulator
+  --network $NETWORK
 
 echo -e "${BLUE}[Step 4]${NC} Creating Remove Member Proposal..."
 flow transactions send cadence/transactions/CreateRemoveMemberProposal.cdc \
@@ -44,7 +62,7 @@ flow transactions send cadence/transactions/CreateRemoveMemberProposal.cdc \
   "Proposal to remove a member from the DAO" \
   0x01 \
   --signer $ADMIN \
-  --network emulator
+  --network $NETWORK
 
 PROPOSAL_ID2=1
 
@@ -58,13 +76,13 @@ flow transactions send cadence/transactions/CreateUpdateConfigProposal.cdc \
   86400.0 \
   43200.0 \
   --signer $ADMIN \
-  --network emulator
+  --network $NETWORK
 
 PROPOSAL_ID3=2
 
 echo -e "${BLUE}[Step 6]${NC} Checking all admin proposals..."
 echo "Proposals created:"
-flow scripts execute cadence/scripts/GetProposalsByType.cdc 1 --network emulator
+flow scripts execute cadence/scripts/GetProposalsByType.cdc 1 --network $NETWORK
 
 echo ""
 echo -e "${GREEN}✓ Admin operations simulation complete!${NC}"

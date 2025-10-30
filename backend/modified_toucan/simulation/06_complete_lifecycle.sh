@@ -2,8 +2,22 @@
 
 # Complete Proposal Lifecycle Simulation
 # Simulates the full lifecycle: Create -> Deposit -> Vote (multiple) -> Pass -> Execute
+#
+# Usage: ./06_complete_lifecycle.sh [NETWORK] [SIGNER]
+#   NETWORK: emulator (default), mainnet, or testnet
+#   SIGNER: account name from flow.json (default: emulator-account)
 
 set -e
+
+# Parse arguments
+NETWORK="${1:-emulator}"
+SIGNER="${2:-emulator-account}"
+
+# Validate network
+if [[ ! "$NETWORK" =~ ^(emulator|mainnet|testnet)$ ]]; then
+    echo "Error: Invalid network '$NETWORK'. Must be: emulator, mainnet, or testnet"
+    exit 1
+fi
 
 GREEN='\033[0;32m'
 BLUE='\033[0;34m'
@@ -12,9 +26,13 @@ NC='\033[0m'
 
 echo -e "${GREEN}=== Complete Proposal Lifecycle Simulation ===${NC}"
 echo ""
+echo -e "${BLUE}Configuration:${NC}"
+echo "  Network: ${NETWORK}"
+echo "  Signer: ${SIGNER}"
+echo ""
 
-PROPOSER="emulator-account"
-VOTER="emulator-account"
+PROPOSER="$SIGNER"
+VOTER="$SIGNER"
 
 echo -e "${BLUE}[Phase 1: Creation]${NC}"
 echo "Creating proposal: 'Complete Lifecycle Test'"
@@ -24,7 +42,7 @@ flow transactions send cadence/transactions/CreateWithdrawTreasuryProposal.cdc \
   150.0 \
   0xf8d6e0586b0a20c7 \
   --signer $PROPOSER \
-  --network emulator
+  --network $NETWORK
 
 PROPOSAL_ID=0
 
@@ -38,7 +56,7 @@ flow transactions send cadence/transactions/DepositProposal.cdc \
   $PROPOSAL_ID \
   50.0 \
   --signer $PROPOSER \
-  --network emulator
+  --network $NETWORK
 
 echo "Checking status (should be Active):"
 flow scripts execute cadence/scripts/GetProposalStatus.cdc $PROPOSAL_ID --network emulator
@@ -53,7 +71,7 @@ flow transactions send cadence/transactions/VoteOnProposal.cdc \
   $PROPOSAL_ID \
   true \
   --signer $VOTER \
-  --network emulator || echo "  (Account may have already voted)"
+  --network $NETWORK || echo "  (Account may have already voted)"
 
 echo ""
 echo "Current vote status:"

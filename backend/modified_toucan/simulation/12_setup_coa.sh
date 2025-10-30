@@ -20,18 +20,29 @@ echo ""
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd "$SCRIPT_DIR/.." && pwd)"
 
-# Default signer
-SIGNER="${SIGNER:-emulator-account}"
+# Parse arguments
+NETWORK="${1:-emulator}"
+SIGNER="${2:-emulator-account}"
 
-# Check if emulator is running
-echo -e "${BLUE}[Pre-check]${NC} Checking Flow emulator..."
-if ! curl -s http://localhost:8888/health > /dev/null 2>&1; then
-    echo -e "${RED}Error: Flow emulator is not running${NC}"
-    echo "Start it with: flow emulator --scheduled-transactions"
+# Validate network
+if [[ ! "$NETWORK" =~ ^(emulator|mainnet|testnet)$ ]]; then
+    echo "Error: Invalid network '$NETWORK'. Must be: emulator, mainnet, or testnet"
     exit 1
 fi
 
-echo -e "${BLUE}[Pre-check]${NC} Using signer: ${SIGNER}"
+# Check if emulator is running (only for emulator network)
+if [ "$NETWORK" == "emulator" ]; then
+    echo -e "${BLUE}[Pre-check]${NC} Checking Flow emulator..."
+    if ! curl -s http://localhost:8888/health > /dev/null 2>&1; then
+        echo -e "${RED}Error: Flow emulator is not running${NC}"
+        echo "Start it with: flow emulator --scheduled-transactions"
+        exit 1
+    fi
+fi
+
+echo -e "${BLUE}[Pre-check]${NC} Configuration:"
+echo "  Network: ${NETWORK}"
+echo "  Signer: ${SIGNER}"
 echo ""
 
 # Compile FlowTreasury.sol and extract bytecode
@@ -81,13 +92,13 @@ echo ""
 
 cd "$PROJECT_ROOT"
 # For simple cases, use direct arguments instead of JSON
-flow transactions send cadence/transactions/SetupCOA.cdc \
+    flow transactions send cadence/transactions/SetupCOA.cdc \
   0.0 \
   nil \
   nil \
   nil \
   --signer $SIGNER \
-  --network emulator \
+  --network $NETWORK \
   || echo -e "${YELLOW}Warning: Transaction may have failed or COA may already exist${NC}"
 
 echo ""
@@ -114,7 +125,7 @@ if [[ $REPLY =~ ^[Yy]$ ]]; then
       nil \
       nil \
       --signer $SIGNER \
-      --network emulator \
+      --network $NETWORK \
       || echo -e "${YELLOW}Warning: Transaction may have failed. Make sure account has FLOW tokens.${NC}"
     
     echo ""
@@ -191,7 +202,7 @@ NODEEOF
     flow transactions send cadence/transactions/SetupCOA.cdc \
       --args-json "$TEMP_ARGS_FILE" \
       --signer $SIGNER \
-      --network emulator \
+      --network $NETWORK \
       || echo -e "${YELLOW}Warning: Deployment may have failed${NC}"
     
     # Clean up temporary file

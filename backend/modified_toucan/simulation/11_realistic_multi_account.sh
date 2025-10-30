@@ -3,8 +3,22 @@
 # Realistic Multi-Account Simulation
 # Simulates a realistic scenario with multiple accounts playing different roles
 # This demonstrates how the DAO works when different parties interact
+#
+# Usage: ./11_realistic_multi_account.sh [NETWORK] [SIGNER]
+#   NETWORK: emulator (default), mainnet, or testnet
+#   SIGNER: account name from flow.json (default: emulator-account)
 
 set -e
+
+# Parse arguments
+NETWORK="${1:-emulator}"
+SIGNER="${2:-emulator-account}"
+
+# Validate network
+if [[ ! "$NETWORK" =~ ^(emulator|mainnet|testnet)$ ]]; then
+    echo "Error: Invalid network '$NETWORK'. Must be: emulator, mainnet, or testnet"
+    exit 1
+fi
 
 GREEN='\033[0;32m'
 BLUE='\033[0;34m'
@@ -13,18 +27,22 @@ NC='\033[0m'
 
 echo -e "${GREEN}=== Realistic Multi-Account Simulation ===${NC}"
 echo ""
+echo -e "${BLUE}Configuration:${NC}"
+echo "  Network: ${NETWORK}"
+echo "  Signer: ${SIGNER}"
+echo ""
 echo -e "${YELLOW}This simulation shows how different accounts interact:${NC}"
 echo "  - Account A: Creates a proposal"
 echo "  - Account B: Deposits stake to activate it"
 echo "  - Accounts C, D, E: Vote on the proposal"
 echo ""
 
-# Using emulator-account for all roles (in production, these would be different)
-PROPOSER="emulator-account"
-DEPOSITOR="emulator-account"
-VOTER1="emulator-account"
-VOTER2="emulator-account"
-VOTER3="emulator-account"
+# Using signer for all roles (in production, these would be different accounts)
+PROPOSER="$SIGNER"
+DEPOSITOR="$SIGNER"
+VOTER1="$SIGNER"
+VOTER2="$SIGNER"
+VOTER3="$SIGNER"
 
 echo -e "${BLUE}[Scenario: Community Fund Request]${NC}"
 echo ""
@@ -40,7 +58,7 @@ flow transactions send cadence/transactions/CreateWithdrawTreasuryProposal.cdc \
   500.0 \
   0xf8d6e0586b0a20c7 \
   --signer $PROPOSER \
-  --network emulator
+  --network $NETWORK
 
 PROPOSAL_ID=0
 
@@ -54,7 +72,7 @@ flow transactions send cadence/transactions/DepositProposal.cdc \
   $PROPOSAL_ID \
   50.0 \
   --signer $DEPOSITOR \
-  --network emulator
+  --network $NETWORK
 
 echo ""
 echo -e "${BLUE}[Step 4]${NC} Proposal is now Active. Community voting begins..."
@@ -66,7 +84,7 @@ flow transactions send cadence/transactions/VoteOnProposal.cdc \
   $PROPOSAL_ID \
   true \
   --signer $VOTER1 \
-  --network emulator || echo "  (Account may have already voted)"
+  --network $NETWORK || echo "  (Account may have already voted)"
 
 echo ""
 echo -e "${BLUE}[Step 6]${NC} Checking current vote status..."

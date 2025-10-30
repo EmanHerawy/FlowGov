@@ -14,6 +14,7 @@ This directory contains shell scripts that simulate various workflows and scenar
 ## Scripts Overview
 
 ### Setup
+- **`deploy_contracts.sh`** - Deploy contracts to a network (emulator/testnet/mainnet)
 - **`00_setup.sh`** - Initial setup: deploy contracts, setup accounts, initialize handlers
 
 ### Basic Workflows
@@ -48,10 +49,36 @@ This directory contains shell scripts that simulate various workflows and scenar
 
 ## Usage
 
+All scripts support network and signer parameters:
+```bash
+./script_name.sh [NETWORK] [SIGNER]
+```
+
+- `NETWORK`: `emulator` (default), `mainnet`, or `testnet`
+- `SIGNER`: account name from flow.json (default: `emulator-account`)
+
+### Deploy Contracts
+```bash
+# Deploy to emulator (default)
+./simulation/deploy_contracts.sh
+
+# Deploy to testnet
+./simulation/deploy_contracts.sh testnet
+
+# Deploy to testnet with specific signer
+./simulation/deploy_contracts.sh testnet alice
+
+# Update existing contracts
+./simulation/deploy_contracts.sh testnet alice --update
+```
+
 ### Run Individual Script
 ```bash
 chmod +x simulation/01_basic_proposal_workflow.sh
 ./simulation/01_basic_proposal_workflow.sh
+
+# With specific network and signer
+./simulation/01_basic_proposal_workflow.sh testnet alice
 ```
 
 ### Run All Simulations
@@ -164,8 +191,10 @@ To use different account names (alice, bob, charlie, etc.):
 
 ## Notes
 
-- Scripts use `--network emulator` by default
+- Scripts use `emulator` network and `emulator-account` signer by default
+- All scripts support network and signer parameters: `./script.sh [NETWORK] [SIGNER]`
 - Some steps may fail if prerequisites aren't met (expected behavior)
 - Scripts are designed to be run sequentially
-- For multi-account testing, create accounts first and update script signers
+- For multi-account testing, create accounts first and use different signers
+- For production deployments, always review contract code and test thoroughly on testnet first
 
