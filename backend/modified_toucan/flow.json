@@ -1,5 +1,11 @@
 {
 	"contracts": {
+		"Test": {
+			"source": "cadence/contracts/Test.cdc",
+			"aliases": {
+				"testing": "0000000000000007"
+			}
+		},
 		"ToucanDAO": {
 			"source": "cadence/contracts/ToucanDAO.cdc",
 			"aliases": {
@@ -8,13 +14,6 @@
 		},
 		"ToucanToken": {
 			"source": "cadence/contracts/ToucanToken.cdc",
-			"aliases": {
-				"testing": "0000000000000007"
-			}
-		},
-		
-		"Test": {
-			"source": "cadence/contracts/Test.cdc",
 			"aliases": {
 				"testing": "0000000000000007"
 			}
@@ -28,6 +27,15 @@
 				"emulator": "f8d6e0586b0a20c7",
 				"mainnet": "f233dcee88fe0abe",
 				"testnet": "9a0766d93b6608b7"
+			}
+		},
+		"EVM": {
+			"source": "testnet://8c5303eaa26202d6.EVM",
+			"hash": "437c8f4529329035dcb987def73fba0339519d65af64d231a626e36d649bdbf6",
+			"aliases": {
+				"emulator": "f8d6e0586b0a20c7",
+				"mainnet": "e467b9dd11fa00df",
+				"testnet": "8c5303eaa26202d6"
 			}
 		},
 		"FlowFees": {
