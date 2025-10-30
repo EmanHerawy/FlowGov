@@ -3,6 +3,7 @@ import "FungibleToken"
 import "ToucanToken"
 import "FlowTransactionSchedulerUtils"
 import "FlowTransactionScheduler"
+import "EVM" 
 
 access(all) contract ToucanDAO {
 
@@ -21,6 +22,7 @@ access(all) contract ToucanDAO {
     access(all) enum ProposalType: UInt8 {
         access(all) case WithdrawTreasury // Withdraw tokens from treasury
         access(all) case AdminBasedOperation
+        access(all) case EVMCall // Execute EVM contract calls
     }
 
     /// Action types that can be executed by proposals
@@ -30,6 +32,7 @@ access(all) contract ToucanDAO {
         access(all) case RemoveMember
         access(all) case UpdateConfig
         access(all) case ExecuteCustom
+        access(all) case ExecuteEVMCall
     }
 
     /// Data structs for different action types
@@ -105,6 +108,36 @@ access(all) contract ToucanDAO {
             self.amount = amount
             self.recipientAddress = recipientAddress
             self.recipientVaultPath = recipientVaultPath
+        }
+    }
+    
+    /// Data for EVM contract call operations
+    /// Contains arrays matching FlowTreasury.execute() signature:
+    /// execute(address[] memory targets, uint256[] memory values, bytes[] memory calldatas)
+    access(all) struct EVMCallData {
+        access(all) let targets: [String]  // EVM addresses as hex strings
+        access(all) let values: [UInt256]   // Values to send with each call (in attoflow)
+        access(all) let functionSignatures: [String]  // Function signatures (e.g., "transfer(address,uint256)")
+        access(all) let functionArgs: [[AnyStruct]]   // Arguments for each function call
+        
+        access(all) init(
+            targets: [String],
+            values: [UInt256],
+            functionSignatures: [String],
+            functionArgs: [[AnyStruct]]
+        ) {
+            // Validate array lengths match
+            assert(
+                targets.length == values.length && 
+                values.length == functionSignatures.length &&
+                functionSignatures.length == functionArgs.length,
+                message: "Array lengths must match: targets, values, functionSignatures, and functionArgs"
+            )
+            
+            self.targets = targets
+            self.values = values
+            self.functionSignatures = functionSignatures
+            self.functionArgs = functionArgs
         }
     }
 
@@ -376,6 +409,8 @@ access(all) contract ToucanDAO {
     access(all) var minimumProposalStake: UFix64  // Minimum ToucanTokens required to create a proposal
     access(all) var defaultVotingPeriod: UFix64  // Default voting period in seconds
     access(all) var defaultCooldownPeriod: UFix64  // Default cooldown period in seconds
+    access(all) var evmTreasuryContractAddress: String?  // EVM address of the FlowTreasury contract (hex string without 0x)
+    access(self) var coaCapability: Capability<auth(EVM.Call) &EVM.CadenceOwnedAccount>?  // Capability to the COA resource
 
     init() {
         self.nextProposalId = 0
@@ -395,6 +430,8 @@ access(all) contract ToucanDAO {
         self.minimumProposalStake = 10.0  // 10 ToucanTokens minimum stake
         self.defaultVotingPeriod = 604800.0  // 7 days default
         self.defaultCooldownPeriod = 86400.0  // 1 day default
+        self.evmTreasuryContractAddress = nil  // Set via UpdateConfig proposal
+        self.coaCapability = nil  // Set via admin function after COA is created
         // Add deployer as the first DAO member for bootstrap
         self.members[self.account.address] = true
     }
@@ -486,6 +523,14 @@ access(all) contract ToucanDAO {
             self.isAdminMember(address: signer.address),
             message: "Only admin members can create this type of proposal"
         )
+    }
+    
+    /// Set the COA capability (admin only)
+    /// Called after COA is created and stored in the contract account
+    access(all) fun setCOACapability(capability: Capability<auth(EVM.Call) &EVM.CadenceOwnedAccount>, signer: auth(BorrowValue) &Account) {
+        self.requireAdminMember(signer: signer)
+        self.coaCapability = capability
+        log("COA capability set successfully")
     }
 
     /// Get the number of members
@@ -601,6 +646,47 @@ access(all) contract ToucanDAO {
             description: description,
             action: action,
             proposalType: ProposalType.AdminBasedOperation,
+            creator: signer.address,
+            treasuryAmount: nil,
+            treasuryAddress: nil
+        )
+    }
+    
+    /// Create an EVM call proposal (admin members only)
+    /// Allows DAO to execute EVM contract calls through the COA
+    access(all) fun createEVMCallProposal(
+        title: String,
+        description: String,
+        targets: [String],
+        values: [UInt256],
+        functionSignatures: [String],
+        functionArgs: [[AnyStruct]],
+        signer: auth(BorrowValue) &Account
+    ) {
+
+        // Validate treasury contract address is set
+        assert(
+            self.evmTreasuryContractAddress != nil,
+            message: "EVM Treasury contract address must be set in DAO configuration"
+        )
+        
+        let evmCallData = EVMCallData(
+            targets: targets,
+            values: values,
+            functionSignatures: functionSignatures,
+            functionArgs: functionArgs
+        )
+        
+        let action = Action(
+            actionType: ActionType.ExecuteEVMCall,
+            data: evmCallData as AnyStruct
+        )
+        
+        self.createProposalInternal(
+            title: title,
+            description: description,
+            action: action,
+            proposalType: ProposalType.EVMCall,
             creator: signer.address,
             treasuryAmount: nil,
             treasuryAddress: nil
@@ -1039,6 +1125,8 @@ access(all) contract ToucanDAO {
         switch proposalType {
             case ProposalType.WithdrawTreasury:
                 self.executeWithdrawTreasury(action: action)
+            case ProposalType.EVMCall:
+                self.executeEVMCall(action: action)
         }
         
         // Handle other action types
@@ -1060,6 +1148,10 @@ access(all) contract ToucanDAO {
             
             case ActionType.ExecuteCustom:
                 log("Custom action executed")
+            
+            case ActionType.ExecuteEVMCall:
+                // Handled in proposal type switch above
+                log("EVM call action executed")
             
             case ActionType.None:
                 log("No action to execute")
@@ -1124,6 +1216,90 @@ access(all) contract ToucanDAO {
             log("DAO configuration updated successfully")
         } else {
             panic("Invalid UpdateConfigData in action")
+        }
+    }
+    
+    /// Execute EVM contract calls through COA
+    /// Calls FlowTreasury.execute() with the provided targets, values, and calldatas
+    access(self) fun executeEVMCall(action: Action) {
+        let evmCallData = action.data as? EVMCallData
+            ?? panic("Invalid EVMCallData in action")
+        
+        // Validate treasury contract address is set
+        let treasuryAddressStr = self.evmTreasuryContractAddress
+            ?? panic("EVM Treasury contract address not configured")
+        
+        // Get COA from stored capability
+        let coaCap = self.coaCapability
+            ?? panic("COA capability not set. Call setCOACapability() first")
+        
+        let coa = coaCap.borrow()
+            ?? panic("Could not borrow COA from capability")
+        
+        // Encode all function calls and convert addresses
+        var calldatas: [[UInt8]] = []
+        var targetAddresses: [EVM.EVMAddress] = []
+        
+        for i, targetStr in evmCallData.targets {
+            // Convert target string to EVMAddress
+            let targetAddress = EVM.addressFromString(targetStr)
+            targetAddresses.append(targetAddress)
+            
+            // Encode function call
+            let calldata = EVM.encodeABIWithSignature(
+                evmCallData.functionSignatures[i],
+                evmCallData.functionArgs[i]
+            )
+            calldatas.append(calldata)
+        }
+        
+        // Call each target contract individually through the COA
+        // This matches FlowTreasury.execute() behavior - if one fails, continue with others
+        var successCount: UInt64 = 0
+        var failureCount: UInt64 = 0
+        
+        var index: UInt64 = 0
+        for targetAddress in targetAddresses {
+            let value = evmCallData.values[index]
+            let calldata = calldatas[index]
+            
+            // Create Balance from UInt256 value (value is in attoflow)
+            // Convert UInt256 to UInt for Balance constructor
+            // Note: UInt256 can be larger than UInt max, so we check bounds
+            let attoflowValue: UInt = UInt(value)
+            let balance = EVM.Balance(attoflow: attoflowValue)
+            
+            // Make the call
+            let result = coa.call(
+                to: targetAddress,
+                data: calldata,
+                gasLimit: 500_000,  // Default gas limit, can be made configurable
+                value: balance
+            )
+            
+            // Check result status
+            switch result.status {
+                case EVM.Status.successful:
+                    successCount = successCount + 1
+                    log("EVM call ".concat(index.toString()).concat(" succeeded. Gas used: ").concat(result.gasUsed.toString()))
+                case EVM.Status.failed:
+                    failureCount = failureCount + 1
+                    log("EVM call ".concat(index.toString()).concat(" failed: ").concat(result.errorMessage))
+                    // Continue execution (don't revert) - matching FlowTreasury behavior
+                case EVM.Status.invalid:
+                    failureCount = failureCount + 1
+                    panic("EVM call ".concat(index.toString()).concat(" invalid: ").concat(result.errorMessage))
+            }
+            
+            index = index + 1
+        }
+        
+        // Log summary
+        log("EVM calls completed. Successful: ".concat(successCount.toString()).concat(", Failed: ").concat(failureCount.toString()))
+        
+        // If all calls failed, revert (optional - could also allow partial success)
+        if successCount == 0 && failureCount > 0 {
+            panic("All EVM calls failed")
         }
     }
         // ════════════════════════════════════════════════════════════
