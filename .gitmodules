@@ -10,3 +10,6 @@
 [submodule "backend/modified_toucan/lib/forge-std"]
 	path = backend/modified_toucan/lib/forge-std
 	url = https://github.com/foundry-rs/forge-std
+[submodule "backend/modified_toucan/lib/openzeppelin-contracts"]
+	path = backend/modified_toucan/lib/openzeppelin-contracts
+	url = https://github.com/OpenZeppelin/openzeppelin-contracts
