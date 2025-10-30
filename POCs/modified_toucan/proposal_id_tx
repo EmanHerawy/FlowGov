@@ -1,0 +1,33 @@
+Block ID	5712e4a2f11c77333434eee01bb5bff720a4f9be6d97a4bc4d3b2105e6c2f836
+Block Height	9
+Status		✅ SEALED
+ID		a8d98350a513dab708a7e9cf8c289ae932c5fe42c5007920e91ded3e86451e5b
+Payer		f8d6e0586b0a20c7
+Authorizers	[f8d6e0586b0a20c7]
+
+Proposal Key:	
+    Address	f8d6e0586b0a20c7
+    Index	0
+    Sequence	8
+
+No Payload Signatures
+
+Envelope Signature 0: f8d6e0586b0a20c7
+Signatures (minimized, use --include signatures)
+
+Events:		 
+    Index	0
+    Type	A.f8d6e0586b0a20c7.ToucanDAO.ProposalCreated
+    Tx ID	a8d98350a513dab708a7e9cf8c289ae932c5fe42c5007920e91ded3e86451e5b
+    Values
+		- creator (Address): 0xf8d6e0586b0a20c7 
+		- id (UInt64): 0 
+		- title (String): "Basic Workflow Test" 
+
+
+
+Code (hidden, use --include code)
+
+Payload (hidden, use --include payload)
+
+Fee Events (hidden, use --include fee-events)
