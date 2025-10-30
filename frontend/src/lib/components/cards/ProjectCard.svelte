@@ -9,7 +9,7 @@
 
 <a href={`/p/${project.project_id}`} class="card-primary">
 	<img
-		src={project.banner_image ?? 'toucans-illustration.png'}
+		src={project.banner_image ?? 'flowgov-illustration.png'}
 		on:error={(e) => handleBannerImgError(e)}
 		alt={`${project.name} banner`}
 		class="banner"

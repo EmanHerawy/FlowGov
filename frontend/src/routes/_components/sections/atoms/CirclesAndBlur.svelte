@@ -101,7 +101,7 @@
 			</div>
 		{/each}
 	{/each}
-	<img src="/toucans-logo.png" alt="Toucans logo" style={`width: ${imagesAndIconsWidth}rem`} />
+	<img src="/flowgov-logo.png" alt="FlowGov logo" style={`width: ${imagesAndIconsWidth}rem`} />
 </div>
 
 <style lang="scss">

@@ -54,7 +54,7 @@
 							$paymentData.NFTCollection
 						}%20collection%20to%20${
 							daoData.generalInfo.twitter ? `@${daoData.generalInfo.twitter}` : $paymentData.daoName
-						}%20on%20Toucans!%0D%0A%0D%0Ahttps://toucans.ecdao.org/p/${
+						}%20on%20FlowGov!%0D%0A%0D%0Ahttps://flowgov.ecdao.org/p/${
 							daoData.generalInfo.project_id
 						}`}
 						target="_blank"
@@ -68,7 +68,7 @@
 							$paymentData.amount
 						}%20$${$paymentData.currency}%20to%20${
 							daoData.generalInfo.twitter ? `@${daoData.generalInfo.twitter}` : $paymentData.daoName
-						}%20on%20Toucans!%0D%0A%0D%0Ahttps://toucans.ecdao.org/p/${
+						}%20on%20FlowGov!%0D%0A%0D%0Ahttps://flowgov.ecdao.org/p/${
 							daoData.generalInfo.project_id
 						}`}
 						target="_blank"
@@ -83,9 +83,9 @@
 						daoData.generalInfo.twitter ? `@${daoData.generalInfo.twitter}` : $paymentData.daoName
 					}%20with%20${$paymentData.amount}%20$${
 						$paymentData.currency
-					}%20on%20Toucans%20and%20got%20${
+					}%20on%20FlowGov%20and%20got%20${
 						$paymentData.amount * 0.98 * $paymentData.issuanceRate * (1 - $paymentData.reserveRate)
-					}%20$${$paymentData.tokenName}.%0D%0A%0D%0Ahttps://toucans.ecdao.org/p/${
+					}%20$${$paymentData.tokenName}.%0D%0A%0D%0Ahttps://flowgov.ecdao.org/p/${
 						daoData.generalInfo.project_id
 					}`}
 					target="_blank"

@@ -14,7 +14,7 @@ export const navElements = [
 	},
 	{
 		name: 'Docs',
-		url: 'https://docs.ecdao.org/products/toucans',
+		url: 'https://docs.ecdao.org/products/flowgov',
 		prefetch: true,
 		target: '_blank'
 	}
@@ -38,8 +38,8 @@ export const emeraldTools = [
 		url: 'https://touchstone.city/'
 	},
 	{
-		name: 'Toucans',
-		url: 'https://toucans.ecdao.org/'
+		name: 'FlowGov',
+		url: 'https://flowgov.ecdao.org/'
 	}
 ];
 

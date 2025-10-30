@@ -8,7 +8,7 @@
 			Discover thriving DAOs and tokens built <strong>#onFlow</strong>
 		</h1>
 		<p class="large">
-			Below you will find a list of DAOs and tokens that have launched on Toucans. Explore all
+			Below you will find a list of DAOs and tokens that have launched on FlowGov. Explore all
 			projects and the most popular. The stats are updated every 30 minutes.
 		</p>
 	</div>
@@ -18,13 +18,13 @@
 	.discover-hero {
 		&-light {
 			background: linear-gradient(rgba(250, 250, 250, 0.96), rgba(250, 250, 250, 1)),
-				url(/toucans-illustration.png);
+				url(/flowgov-illustration.png);
 			background-size: cover;
 		}
 
 		&-dark {
 			background: linear-gradient(rgba(18, 18, 18, 0.96), rgba(18, 18, 18, 1)),
-				url(/toucans-illustration.png);
+				url(/flowgov-illustration.png);
 			background-size: cover;
 		}
 	}

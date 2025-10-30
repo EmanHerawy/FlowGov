@@ -10,7 +10,7 @@ const GLOSSARY = {
 	signer:
 		"Address required to sign transactiont that involve transfering money from the DAO's treasury",
 	preferredCurrnecy:
-		"The preferred/main currency used in the DAO. Toucans will automatically track user funding in this currency."
+		"The preferred/main currency used in the DAO. FlowGov will automatically track user funding in this currency."
 };
 
 export default GLOSSARY;
