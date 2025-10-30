@@ -31,7 +31,38 @@ flow transactions send cadence/transactions/InitToucanDAOTransactionHandler.cdc 
 flow transactions send cadence/transactions/InitSchedulerManager.cdc --signer alice
 ```
 
-### 4. Mint ToucanTokens (Admin only)
+### 4. Setup COA (Cadence-Owned Account) for EVM interactions
+```bash
+# Basic COA setup (no funding, no deployment)
+flow transactions send cadence/transactions/SetupCOA.cdc 0.0 nil nil nil --signer alice
+
+# COA setup with funding
+flow transactions send cadence/transactions/SetupCOA.cdc 1.0 nil nil nil --signer alice
+
+# COA setup with FlowTreasury contract deployment (requires bytecode)
+flow transactions send cadence/transactions/SetupCOA.cdc \
+  0.0 \
+  <bytecode_hex_string> \
+  nil \
+  5000000 \
+  --signer alice
+```
+
+### 5. Fund COA with FLOW tokens
+```bash
+# Send FLOW tokens to an existing COA
+flow transactions send cadence/transactions/FundCOA.cdc 10.0 --signer alice
+```
+
+**Parameters:**
+- `amount: UFix64` - Amount of FLOW tokens to send to the COA
+
+**Note:** 
+- The COA must already exist (created via SetupCOA.cdc)
+- The signer must have a FlowToken vault set up
+- The signer must have sufficient FLOW balance
+
+### 6. Mint ToucanTokens (Admin only)
 ```bash
 flow transactions send cadence/transactions/MintTokens.cdc 1000.0 --signer emulator-account --network emulator
 ```
