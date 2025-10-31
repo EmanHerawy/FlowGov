@@ -44,12 +44,15 @@ This directory contains shell scripts that simulate various workflows and scenar
 - **`11_realistic_multi_account.sh`** - Realistic scenario with separate proposer, depositor, and voters
 
 ### Utility Scripts
-- **`setup_multiple_accounts.sh`** - Instructions for setting up multiple accounts
+- **`setup_multiple_accounts.sh`** - Create and setup multiple accounts with network/count parameters
+- **`fund_accounts_from_faucet.sh`** - Fund accounts from testnet faucet
 - **`list_accounts.sh`** - List all accounts configured in flow.json and available on networks
 - **`add_accounts_to_flow_json.sh`** - Interactive helper to add accounts to flow.json
 
-### Master Script
+### Master Scripts
 - **`10_comprehensive_test.sh`** - Runs all scenarios in sequence
+- **`14_testnet_setup_and_proposals.sh`** - Complete setup and proposal generation (accounts, contracts, proposals)
+- **`15_vote_on_proposals.sh`** - Random voting on existing proposals
 
 ## EVM Integration Features
 
@@ -146,10 +149,53 @@ chmod +x simulation/00_setup.sh
 ./simulation/00_setup.sh
 ```
 
-### Setup Multiple Accounts (Instructions)
+### Complete Testnet Setup and Proposal Generation
 ```bash
-chmod +x simulation/setup_multiple_accounts.sh
-./simulation/setup_multiple_accounts.sh
+# Run full setup with default parameters (emulator, 10 accounts)
+bash simulation/14_testnet_setup_and_proposals.sh
+
+# Specify network and account count
+bash simulation/14_testnet_setup_and_proposals.sh emulator 5
+bash simulation/14_testnet_setup_and_proposals.sh testnet 10
+```
+
+This script will:
+- Create and setup multiple accounts (saves keys to `.pkey` files)
+- Fund accounts from faucet (testnet) or use emulator funds
+- Setup COA and deploy FlowTreasury contract
+- Fund COA with FLOW for EVM operations
+- Deploy ToucanToken and ToucanDAO contracts
+- Create 30 WithdrawTreasury proposals from `proposals.json`
+- Create 10 EVMCall proposals with random values (10-100 FLOW)
+
+All outputs are saved to `simulation/logs/` directory.
+
+### Setup Multiple Accounts
+```bash
+# Create and setup accounts with network/count parameters
+bash simulation/setup_multiple_accounts.sh [NETWORK] [ACCOUNT_COUNT]
+
+# Examples:
+bash simulation/setup_multiple_accounts.sh emulator 10
+bash simulation/setup_multiple_accounts.sh testnet 5
+```
+
+### Fund Accounts from Faucet
+```bash
+# Fund accounts created by setup_multiple_accounts.sh
+bash simulation/fund_accounts_from_faucet.sh [NETWORK]
+
+# Example:
+bash simulation/fund_accounts_from_faucet.sh testnet
+```
+
+### Vote on Proposals
+```bash
+# Randomly vote on existing proposals
+bash simulation/15_vote_on_proposals.sh [NETWORK] [ACCOUNT_COUNT]
+
+# Example:
+bash simulation/15_vote_on_proposals.sh emulator 10
 ```
 
 ## Account Setup
