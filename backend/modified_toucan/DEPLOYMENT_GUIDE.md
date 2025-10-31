@@ -263,9 +263,125 @@ flow accounts add-contract cadence/contracts/ToucanDAO.cdc \
 
 ---
 
-## Step 5: Verify Contracts
+## Step 5: Post-Deployment Setup (Critical Steps)
 
-### 5.1 Verify ToucanToken
+**⚠️ IMPORTANT:** These steps are required for the DAO to function correctly. Skipping them will cause proposal deposits and EVM calls to fail.
+
+### 5.1 Setup COA on DAO Contract Account
+
+The COA must exist on the **DAO contract account** (dev-account) with proper storage controller for the capability to be auto-detected or manually set.
+
+**Option A: If COA doesn't exist on DAO account yet**
+
+Run the COA setup on the DAO contract account:
+
+```bash
+cd backend/modified_toucan
+flow transactions send cadence/transactions/SetupCOA.cdc \
+  --signer dev-account \
+  --network testnet
+```
+
+**Option B: Create Storage Capability Controller**
+
+If COA already exists but capability isn't accessible, create the storage controller:
+
+```bash
+flow transactions send cadence/transactions/CreateCOACapabilityController.cdc \
+  --signer dev-account \
+  --network testnet
+```
+
+### 5.2 Set COA Capability in ToucanDAO
+
+The DAO needs a reference to the COA capability to execute EVM calls. This can be done automatically or manually.
+
+**Option A: Automatic Detection (Recommended)**
+
+If COA was set up with storage controllers, run:
+
+```bash
+flow transactions send cadence/transactions/SetCOACapabilityAuto.cdc \
+  --signer dev-account \
+  --network testnet
+```
+
+**Option B: Manual Setup**
+
+If automatic detection fails, you can manually pass the capability:
+
+```bash
+# First, get the COA capability from public path
+# Then run SetCOACapability.cdc with the capability as argument
+flow transactions send cadence/transactions/SetCOACapability.cdc \
+  <CAPABILITY_ARGUMENT> \
+  --signer dev-account \
+  --network testnet
+```
+
+**Verify COA Capability is Set:**
+
+```bash
+flow scripts execute cadence/scripts/GetDAOConfiguration.cdc \
+  --network testnet
+```
+
+Check that the output shows the COA capability is configured.
+
+### 5.3 Initialize Transaction Handler
+
+**CRITICAL:** The transaction handler must be initialized before any proposals can be deposited. Without this, proposal deposits will fail with "Could not get handler capability".
+
+```bash
+flow transactions send cadence/transactions/InitToucanDAOTransactionHandler.cdc \
+  --signer dev-account \
+  --network testnet
+```
+
+**What this does:**
+- Creates and saves the `Handler` resource at `/storage/ToucanDAOTransactionHandler`
+- Issues storage capability controller with `auth(FlowTransactionScheduler.Execute)` entitlement
+- Publishes public capability for querying
+
+**Expected Output:**
+- Handler resource created
+- Storage capability controller issued
+- Public capability published
+
+### 5.4 Configure flow.json Aliases (For Multiple Deployments)
+
+If you're working with multiple deployments or contract versions, add aliases to `flow.json`:
+
+```json
+{
+  "contracts": {
+    "ToucanToken": {
+      "source": "cadence/contracts/ToucanToken.cdc",
+      "aliases": {
+        "testnet": "0xd020ccc9daaea77d"
+      }
+    },
+    "ToucanDAO": {
+      "source": "cadence/contracts/ToucanDAO.cdc",
+      "aliases": {
+        "testnet": "0xd020ccc9daaea77d"
+      }
+    }
+  }
+}
+```
+
+This ensures transactions reference the correct contract address when there are multiple deployments.
+
+**Expected Output:**
+- All setup transactions completed successfully
+- No errors in transaction logs
+
+---
+
+## Step 6: Verify Contracts
+
+### 6.1 Verify ToucanToken
 
 ```bash
 # Check contract is deployed
@@ -278,7 +394,7 @@ flow scripts execute cadence/scripts/GetTokenBalance.cdc \
   --network testnet
 ```
 
-### 5.2 Verify ToucanDAO
+### 6.2 Verify ToucanDAO
 
 ```bash
 # Check contract is deployed
@@ -292,7 +408,7 @@ flow scripts execute cadence/scripts/GetTreasuryAddressFromDAO.cdc \
 **Expected Output:**
 - Treasury address should match FlowTreasuryWithOwner address
 
-### 5.3 Verify FlowTreasuryWithOwner
+### 6.3 Verify FlowTreasuryWithOwner
 
 Check on Flow EVM Explorer:
 - Network: Flow Testnet EVM (Chain ID: 545)
@@ -310,9 +426,9 @@ forge verify-contract \
 
 ---
 
-## Step 6: Update Documentation
+## Step 7: Update Documentation
 
-### 6.1 Update README.md
+### 7.1 Update README.md
 
 Update `backend/modified_toucan/README.md` with:
 
@@ -334,7 +450,7 @@ Update `backend/modified_toucan/README.md` with:
    - COA owner of FlowTreasuryWithOwner
    - Initial token balances
 
-### 6.2 Save Deployment Info
+### 7.2 Save Deployment Info
 
 Create/update `simulation/logs/deployed_addresses.json`:
 
@@ -380,7 +496,10 @@ After deployment, verify:
 - [ ] FlowTreasuryWithOwner deployed with COA as owner
 - [ ] ToucanToken deployed and 3M minted to dev-account
 - [ ] ToucanDAO deployed with correct treasury address
-- [ ] COA capability auto-detected by ToucanDAO
+- [ ] COA setup on DAO contract account (Step 5.1)
+- [ ] COA capability set in ToucanDAO (Step 5.2)
+- [ ] Transaction handler initialized (Step 5.3) ⚠️ **CRITICAL**
+- [ ] flow.json aliases configured (Step 5.4)
 - [ ] All transaction hashes saved
 - [ ] All addresses documented in README
 - [ ] deployed_addresses.json updated
@@ -407,25 +526,318 @@ ToucanDAO:                        0xd4d093d60579cf41
 
 ## Troubleshooting
 
+This section covers common issues encountered during deployment and operation, with detailed solutions.
+
+### Error: "Could not get handler capability"
+
+**Error Message:**
+```
+error: assertion failed: Could not get handler capability
+  --> d020ccc9daaea77d.ToucanDAO:849:8
+```
+
+**Cause:** The transaction handler hasn't been initialized on the account attempting to deposit proposals.
+
+**Solution:**
+1. Initialize the transaction handler on the account that will deposit proposals:
+   ```bash
+   flow transactions send cadence/transactions/InitToucanDAOTransactionHandler.cdc \
+     --signer dev-account \
+     --network testnet
+   ```
+
+2. Verify the handler was created:
+   ```bash
+   # Check if handler resource exists
+   flow scripts execute cadence/scripts/GetAccountInfo.cdc \
+     "0xd020ccc9daaea77d" \
+     --network testnet
+   ```
+
+**Prevention:** Always run `InitToucanDAOTransactionHandler.cdc` immediately after deploying ToucanDAO (see Step 5.3).
+
+---
+
+### Error: "value of type `&ToucanDAO` has no member `setCOACapability`"
+
+**Error Message:**
+```
+error: value of type `&ToucanDAO` has no member `setCOACapability`
+  --> transaction:53:18
+```
+
+**Cause:** The deployed ToucanDAO contract is an older version that doesn't include the `setCOACapability` function.
+
+**Solution:**
+1. Update the contract on the deployed account:
+   ```bash
+   flow accounts update-contract cadence/contracts/ToucanDAO.cdc \
+     --signer dev-account \
+     --network testnet
+   ```
+
+2. Verify the function exists:
+   ```bash
+   flow accounts get-contract ToucanDAO \
+     --signer dev-account \
+     --network testnet | grep setCOACapability
+   ```
+
+**Prevention:** Always deploy from the latest version of `ToucanDAO.cdc`.
+
+---
+
+### Error: "mismatched types ... expected `A.d020ccc9daaea77d.ToucanToken.Vault`, got `A.877bafb3d5241d1b.ToucanToken.Vault`"
+
+**Error Message:**
+```
+error: mismatched types
+  expected `A.d020ccc9daaea77d.ToucanToken.Vault`
+  got `A.877bafb3d5241d1b.ToucanToken.Vault`
+```
+
+**Cause:** The signer's ToucanToken vault is from a different contract deployment than the one expected by ToucanDAO. This happens when there are multiple ToucanToken deployments.
+
+**Solution:**
+1. Add contract aliases to `flow.json`:
+   ```json
+   {
+     "contracts": {
+       "ToucanToken": {
+         "source": "cadence/contracts/ToucanToken.cdc",
+         "aliases": {
+           "testnet": "0xd020ccc9daaea77d"
+         }
+       }
+     }
+   }
+   ```
+
+2. Update transaction imports to use explicit address:
+   ```cadence
+   import ToucanToken from 0xd020ccc9daaea77d
+   ```
+
+3. Or ensure both contracts and transactions reference the same deployment.
+
+**Prevention:** Always use contract aliases in `flow.json` and deploy all contracts to the same account when possible.
+
+---
+
+### Error: "access denied: cannot access `getControllers` because function requires `GetStorageCapabilityController` authorization"
+
+**Error Message:**
+```
+access denied: cannot access `getControllers` because function requires 
+`Capabilities | StorageCapabilities | GetStorageCapabilityController` authorization
+```
+
+**Cause:** The transaction is trying to access storage capability controllers but the signer account doesn't have the `GetStorageCapabilityController` entitlement.
+
+**Solution:**
+1. Ensure the transaction's `prepare` block includes `GetStorageCapabilityController`:
+   ```cadence
+   prepare(signer: auth(BorrowValue, GetStorageCapabilityController) &Account) {
+       // Transaction code
+   }
+   ```
+
+2. If using an existing transaction, update it or create a new one with proper entitlements.
+
+**Prevention:** Always include required entitlements in transaction prepare blocks.
+
+---
+
+### Error: "COA capability not set. Call setCOACapability() first"
+
+**Error Message:**
+```
+panic: COA capability not set. Call setCOACapability() first
+```
+
+**Cause:** ToucanDAO's COA capability wasn't set during deployment and auto-detection failed.
+
+**Solution:**
+1. **First, ensure COA exists on the DAO contract account:**
+   ```bash
+   flow transactions send cadence/transactions/SetupCOA.cdc \
+     --signer dev-account \
+     --network testnet
+   ```
+
+2. **Create storage capability controller:**
+   ```bash
+   flow transactions send cadence/transactions/CreateCOACapabilityController.cdc \
+     --signer dev-account \
+     --network testnet
+   ```
+
+3. **Set COA capability (automatic):**
+   ```bash
+   flow transactions send cadence/transactions/SetCOACapabilityAuto.cdc \
+     --signer dev-account \
+     --network testnet
+   ```
+
+**Alternative (Manual):** If automatic setup fails, use `SetCOACapability.cdc` with manual capability retrieval.
+
+**Prevention:** Follow Step 5.1 and 5.2 in the deployment guide to set up COA properly before using EVM call proposals.
+
+---
+
+### Error: "Could not determine balance" or "ToucanToken vault not found"
+
+**Error Message:**
+```
+panic: ToucanToken vault not found
+```
+
+**Cause:** The account doesn't have a ToucanToken vault set up.
+
+**Solution:**
+1. Setup the account with ToucanToken vault:
+   ```bash
+   flow transactions send cadence/transactions/SetupAccount.cdc \
+     --signer <account-alias> \
+     --network testnet
+   ```
+
+2. Verify vault exists:
+   ```bash
+   flow scripts execute cadence/scripts/GetToucanTokenBalance.cdc \
+     "0x<account_address>" \
+     --network testnet
+   ```
+
+**Prevention:** Always run `SetupAccount.cdc` for any account that will receive or use ToucanTokens.
+
+---
+
+### Error: "Insufficient deposit amount" during proposal deposit
+
+**Error Message:**
+```
+assertion failed: Insufficient deposit amount. Required: 10.0, Provided: X.0
+```
+
+**Cause:** The deposit amount is less than `minimumProposalStake` (default: 10.0 ToucanTokens).
+
+**Solution:**
+1. Check the required deposit amount:
+   ```bash
+   flow scripts execute cadence/scripts/GetDAOConfiguration.cdc \
+     --network testnet
+   ```
+   Look for `minimumProposalStake`.
+
+2. Mint more ToucanTokens if needed:
+   ```bash
+   flow transactions send cadence/transactions/MintAndDepositTokens.cdc \
+     1000000.0 \
+     "0x<account_address>" \
+     --signer dev-account \
+     --network testnet
+   ```
+
+**Prevention:** Always check account balance before attempting deposits.
+
+---
+
+### Error: "Proposal is not pending - cannot deposit"
+
+**Error Message:**
+```
+assertion failed: Proposal is not pending - cannot deposit
+```
+
+**Cause:** The proposal has already been deposited (status is Active) or has progressed beyond Pending status.
+
+**Solution:**
+1. Check proposal status:
+   ```bash
+   flow scripts execute cadence/scripts/GetProposalStatus.cdc \
+     <PROPOSAL_ID> \
+     --network testnet
+   ```
+
+2. Only Pending proposals can be deposited. If already Active, skip to voting.
+
+**Prevention:** Check proposal status before attempting deposits.
+
+---
+
+### Error: "Transaction handler not found" or handler capability issues
+
+**Error Message:**
+```
+Could not get handler capability
+```
+
+**Cause:** The transaction handler resource doesn't exist or the capability controller wasn't created properly.
+
+**Solution:**
+1. **Re-initialize the handler:**
+   ```bash
+   flow transactions send cadence/transactions/InitToucanDAOTransactionHandler.cdc \
+     --signer dev-account \
+     --network testnet
+   ```
+
+2. **Verify handler resource exists:**
+   Check that the transaction shows `StorageCapabilityControllerIssued` event for `/storage/ToucanDAOTransactionHandler`.
+
+3. **If handler exists but capability isn't accessible:**
+   Check storage paths and ensure the signer has proper entitlements.
+
+**Prevention:** Always run `InitToucanDAOTransactionHandler.cdc` immediately after DAO deployment (see Step 5.3).
+
+---
+
+### General Issues
+
 ### COA not found
 - Run `12_setup_coa.sh` again
 - Check transaction logs for COA address
 - Use `GetCOAAddress.cdc` script
+- Verify COA exists at `/storage/evm` on the correct account
 
 ### Insufficient FLOW
 - Check balance: `flow accounts get dev-account --network testnet`
 - Fund via faucet: https://testnet-faucet.onflow.org/
 - Reduce funding amounts if needed
+- Verify COA balance if EVM calls are failing
 
 ### Contract deployment fails
-- Verify private key format
+- Verify private key format (should be hex without 0x prefix for Flow CLI)
 - Check RPC URL is correct
 - Ensure account has sufficient FLOW for gas
+- Verify contract code compiles without errors
 
-### COA capability not set
-- COA must exist on contract account before DAO deployment
-- Or call `setCOACapability()` after deployment
-- Check logs for auto-detection status
+### JSON-Cadence argument formatting errors
+
+**Error Message:**
+```
+error parsing transaction arguments: failed to decode JSON: 
+json: cannot unmarshal string into Go value of type map[string]interface {}
+```
+
+**Cause:** Incorrect format for `UInt64` or `UFix64` arguments in JSON-Cadence.
+
+**Solution:**
+Always use proper JSON-Cadence format:
+```json
+[
+  {"type": "UInt64", "value": "123"},
+  {"type": "UFix64", "value": "10.0"}
+]
+```
+
+**Not:**
+```json
+[123, 10.0]  // ❌ Wrong
+```
+
+**Prevention:** Always use Flow CLI's JSON-Cadence format helper or reference the correct format in documentation.
 
 ---
 

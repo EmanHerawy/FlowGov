@@ -16,7 +16,8 @@
 		"ToucanToken": {
 			"source": "cadence/contracts/ToucanToken.cdc",
 			"aliases": {
-				"testing": "0000000000000007"
+				"testing": "0000000000000007",
+				"testnet": "d020ccc9daaea77d"
 			}
 		}
 	},
