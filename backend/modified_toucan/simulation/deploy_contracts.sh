@@ -5,12 +5,15 @@
 #
 # Usage: ./deploy_contracts.sh [NETWORK] [SIGNER] [--update]
 #   NETWORK: emulator (default), mainnet, or testnet
-#   SIGNER: account name from flow.json (default: emulator-account)
+#   SIGNER: account name from flow.json (default: network-specific)
+#           - emulator: emulator-account
+#           - testnet: testnet-deployer
+#           - mainnet: (must be specified)
 #   --update: Optional flag to update existing contracts (default: false)
 #
 # Examples:
 #   ./deploy_contracts.sh                    # Deploys to emulator using emulator-account
-#   ./deploy_contracts.sh testnet             # Deploys to testnet using emulator-account
+#   ./deploy_contracts.sh testnet             # Deploys to testnet using testnet-deployer
 #   ./deploy_contracts.sh emulator alice      # Deploys to emulator using alice account
 #   ./deploy_contracts.sh testnet alice --update  # Updates contracts on testnet using alice
 
@@ -18,7 +21,12 @@ set -e
 
 # Parse arguments
 NETWORK="${1:-emulator}"
-SIGNER="${2:-emulator-account}"
+# Default signer based on network
+DEFAULT_SIGNER="emulator-account"
+if [ "$NETWORK" == "testnet" ]; then
+    DEFAULT_SIGNER="testnet-deployer"
+fi
+SIGNER="${2:-$DEFAULT_SIGNER}"
 UPDATE_FLAG="${3:-}"
 
 # Check for --update flag in any position
@@ -28,13 +36,28 @@ if [[ "$1" == "--update" ]] || [[ "$2" == "--update" ]] || [[ "$3" == "--update"
     # Remove --update from positional args
     if [[ "$1" == "--update" ]]; then
         NETWORK="${2:-emulator}"
-        SIGNER="${3:-emulator-account}"
+        # Set default signer based on network
+        DEFAULT_SIGNER="emulator-account"
+        if [ "$NETWORK" == "testnet" ]; then
+            DEFAULT_SIGNER="testnet-deployer"
+        fi
+        SIGNER="${3:-$DEFAULT_SIGNER}"
     elif [[ "$2" == "--update" ]]; then
         NETWORK="${1:-emulator}"
-        SIGNER="${3:-emulator-account}"
+        # Set default signer based on network
+        DEFAULT_SIGNER="emulator-account"
+        if [ "$NETWORK" == "testnet" ]; then
+            DEFAULT_SIGNER="testnet-deployer"
+        fi
+        SIGNER="${3:-$DEFAULT_SIGNER}"
     else
         NETWORK="${1:-emulator}"
-        SIGNER="${2:-emulator-account}"
+        # Set default signer based on network
+        DEFAULT_SIGNER="emulator-account"
+        if [ "$NETWORK" == "testnet" ]; then
+            DEFAULT_SIGNER="testnet-deployer"
+        fi
+        SIGNER="${2:-$DEFAULT_SIGNER}"
     fi
 fi
 
@@ -235,13 +258,41 @@ if [ -n "$UPDATE" ]; then
     }
 else
     echo -e "${YELLOW}Deploying new contracts...${NC}"
-    flow deploy --network $NETWORK 2>&1 | tee "$DEPLOY_OUTPUT" || {
-        echo ""
-        echo -e "${RED}✗ Deployment failed${NC}"
-        echo "Check the error messages above for details."
-        rm -f "$DEPLOY_OUTPUT"
-        exit 1
+    # Deploy ToucanToken first (no init args)
+    flow accounts add-contract cadence/contracts/ToucanToken.cdc --signer $SIGNER --network $NETWORK 2>&1 | tee -a "$DEPLOY_OUTPUT" || {
+        echo -e "${YELLOW}Note: ToucanToken may already be deployed${NC}"
     }
+    
+    # Deploy ToucanDAO separately with required init argument
+    # Use deployed FlowTreasuryWithOwner address
+    # FlowTreasuryWithOwner contract: 0x1140A569F917D1776848437767eE526298E49769 (verified on testnet)
+    TREASURY_ADDR_WITH_PREFIX="0x1140A569F917D1776848437767eE526298E49769"
+    if [ "$NETWORK" == "emulator" ]; then
+        # For emulator, use default empty address (FlowTreasuryWithOwner not deployed on emulator)
+        TREASURY_ADDR="0000000000000000000000000000000000000000"
+    else
+        # Strip 0x prefix for Cadence (Cadence expects hex string without 0x)
+        TREASURY_ADDR=$(echo "$TREASURY_ADDR_WITH_PREFIX" | sed 's/^0x//')
+    fi
+    echo -e "${BLUE}Deploying ToucanDAO with EVM treasury address: ${TREASURY_ADDR_WITH_PREFIX}${NC}"
+    # Use flow accounts add-contract with --args-json for init arguments
+    python3 << PYEOF > /tmp/dao_args.json
+import json
+args = [
+    {"type": "String", "value": "$TREASURY_ADDR"}
+]
+print(json.dumps(args, ensure_ascii=False))
+PYEOF
+    flow accounts add-contract cadence/contracts/ToucanDAO.cdc --args-json "$(cat /tmp/dao_args.json)" --signer $SIGNER --network $NETWORK 2>&1 | tee -a "$DEPLOY_OUTPUT" || {
+        echo -e "${YELLOW}Note: ToucanDAO may already be deployed${NC}"
+    }
+    
+    # Deploy Test contract if it exists (no init args)
+    if [ -f "$PROJECT_ROOT/cadence/contracts/Test.cdc" ]; then
+        flow accounts add-contract cadence/contracts/Test.cdc --signer $SIGNER --network $NETWORK 2>&1 | tee -a "$DEPLOY_OUTPUT" || {
+            echo -e "${YELLOW}Note: Test contract may already be deployed${NC}"
+        }
+    fi
 fi
 
 # Extract transaction hash from deployment output

@@ -160,24 +160,33 @@ for i in $(seq 1 $ACCOUNT_COUNT); do
             ADDRESS=$(echo "$CLEAN_OUTPUT" | grep -oE '0x[0-9a-f]{16}' | head -1 || echo "")
         fi
         
-        # Remove auto-added account from flow.json (Flow CLI adds it automatically with empty name)
-        # We don't want to save accounts to flow.json - they're saved to testnet_accounts.json instead
+        # Save account to flow.json for use as signer
         if [ -n "$ADDRESS" ] && [ -f "$PROJECT_ROOT/flow.json" ] && command -v jq &> /dev/null; then
-            # Remove account with empty name (Flow CLI auto-adds accounts this way)
-            # Also remove any account entries matching our address
+            # Remove any existing account entry with empty name (Flow CLI might auto-add)
+            # Then add our account with proper name
             ADDRESS_NO_PREFIX="${ADDRESS#0x}"  # Remove 0x prefix for comparison
-            jq --arg addr "$ADDRESS" \
+            jq --arg name "$ACCOUNT_NAME" \
+               --arg addr "$ADDRESS" \
                --arg addrnoprefix "$ADDRESS_NO_PREFIX" \
+               --arg keyfile "${ACCOUNT_NAME}.pkey" \
                '.accounts |= (
                  del(.[""]) |
                  with_entries(select(
                    .value.address != $addr and
                    (.value.address | ascii_upcase) != ($addr | ascii_upcase) and
-                   (.value.address | ltrimstr("0x") | ascii_upcase) != ($addrnoprefix | ascii_upcase)
+                   (.value.address | ltrimstr("0x") | ascii_upcase) != ($addrnoprefix | ascii_upcase) and
+                   .key != $name
                  ))
-               )' \
+               ) |
+               .accounts[$name] = {
+                 "address": $addr,
+                 "key": {
+                   "type": "file",
+                   "location": $keyfile
+                 }
+               }' \
                "$PROJECT_ROOT/flow.json" > "$PROJECT_ROOT/flow.json.tmp" && \
-            mv "$PROJECT_ROOT/flow.json.tmp" "$PROJECT_ROOT/flow.json" || true
+            mv "$PROJECT_ROOT/flow.json.tmp" "$PROJECT_ROOT/flow.json" || log_error "Failed to save account to flow.json"
         fi
     fi
     
@@ -230,18 +239,9 @@ PYEOF
             log_error "Neither jq nor python3 available. Account info not saved."
         fi
         
-        # Note: Account vault setup requires the account to be in flow.json
-        # Since we're not saving accounts to flow.json, vault setup is skipped
-        # To use these accounts as signers, manually add them to flow.json first
-        log "Account created. To use as signer, add to flow.json with file-based key:"
-        log "  \"$ACCOUNT_NAME\": {"
-        log "    \"address\": \"$ADDRESS\","
-        log "    \"key\": {"
-        log "      \"type\": \"file\","
-        log "      \"location\": \"${ACCOUNT_NAME}.pkey\""
-        log "    }"
-        log "  }"
-        log "Then run: flow transactions send cadence/transactions/SetupAccount.cdc --signer $ACCOUNT_NAME --network $NETWORK"
+        # Account is saved to flow.json, can be used as signer directly
+        log "Account saved to flow.json and ready to use as signer"
+        log "To set up vault, run: flow transactions send cadence/transactions/SetupAccount.cdc --signer $ACCOUNT_NAME --network $NETWORK"
     else
         log_error "Could not create account $ACCOUNT_NAME (address not found)"
     fi
