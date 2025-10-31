@@ -59,19 +59,25 @@ access(all) contract ToucanDAO {
         access(all) let minimumProposalStake: UFix64?
         access(all) let defaultVotingPeriod: UFix64?
         access(all) let defaultCooldownPeriod: UFix64?
+        access(all) let evmTreasuryContractAddress: String?  // EVM address of FlowTreasury contract (hex string without 0x)
+        access(all) let updateCOACapability: Bool?  // If true, refreshes COA capability from /public/evm
         
         access(all) init(
             minVoteThreshold: UInt64?,
             minimumQuorumNumber: UFix64?,
             minimumProposalStake: UFix64?,
             defaultVotingPeriod: UFix64?,
-            defaultCooldownPeriod: UFix64?
+            defaultCooldownPeriod: UFix64?,
+            evmTreasuryContractAddress: String?,
+            updateCOACapability: Bool?
         ) {
             self.minVoteThreshold = minVoteThreshold
             self.minimumQuorumNumber = minimumQuorumNumber
             self.minimumProposalStake = minimumProposalStake
             self.defaultVotingPeriod = defaultVotingPeriod
             self.defaultCooldownPeriod = defaultCooldownPeriod
+            self.evmTreasuryContractAddress = evmTreasuryContractAddress
+            self.updateCOACapability = updateCOACapability
         }
     }
     
@@ -431,7 +437,43 @@ access(all) contract ToucanDAO {
         self.defaultVotingPeriod = 604800.0  // 7 days default
         self.defaultCooldownPeriod = 86400.0  // 1 day default
         self.evmTreasuryContractAddress = nil  // Set via UpdateConfig proposal
-        self.coaCapability = nil  // Set via admin function after COA is created
+        
+        // Try to automatically set COA capability if it exists on the contract account
+        // This allows COA to be set up before contract deployment
+        // If COA doesn't exist yet, it will be nil and can be set later via setCOACapability
+        var coaCapabilityFound: Capability<auth(EVM.Call) &EVM.CadenceOwnedAccount>? = nil
+        
+        // Check if COA exists in storage (indicates capability might be available)
+        if self.account.storage.borrow<&EVM.CadenceOwnedAccount>(from: /storage/evm) != nil {
+            // COA exists, try to get the capability using storage controllers
+            // This is the safest way to check for capabilities without panicking
+            let controllers = self.account.capabilities.storage.getControllers(forPath: /storage/evm)
+            for controller in controllers {
+                // Check if this controller's capability matches the type we need
+                if let cap = controller.capability as? Capability<auth(EVM.Call) &EVM.CadenceOwnedAccount> {
+                    coaCapabilityFound = cap
+                    break
+                }
+            }
+            
+            // If not found via controllers, the capability might be published at /public/evm
+            // Note: capabilities.get() will panic if not found, but we've verified COA exists
+            // So if controllers don't have it, it should be at /public/evm if SetupCOA was run correctly
+            if coaCapabilityFound == nil {
+                // Try direct get from /public/evm - SetupCOA publishes it there
+                // This will panic if not found, but that's acceptable since COA exists
+                let publicCap = self.account.capabilities.get<auth(EVM.Call) &EVM.CadenceOwnedAccount>(/public/evm)
+                coaCapabilityFound = publicCap
+            }
+        }
+        
+        self.coaCapability = coaCapabilityFound
+        if coaCapabilityFound != nil {
+            log("COA capability automatically configured from contract account")
+        } else {
+            log("COA capability not found - can be set later via setCOACapability if COA is created after deployment")
+        }
+        
         // Add deployer as the first DAO member for bootstrap
         self.members[self.account.address] = true
     }
@@ -600,6 +642,8 @@ access(all) contract ToucanDAO {
         minimumProposalStake: UFix64?,
         defaultVotingPeriod: UFix64?,
         defaultCooldownPeriod: UFix64?,
+        evmTreasuryContractAddress: String?,
+        updateCOACapability: Bool?,
         signer: auth(BorrowValue) &Account
     ) {
         // Require admin member
@@ -612,7 +656,9 @@ access(all) contract ToucanDAO {
                 minimumQuorumNumber: minimumQuorumNumber,
                 minimumProposalStake: minimumProposalStake,
                 defaultVotingPeriod: defaultVotingPeriod,
-                defaultCooldownPeriod: defaultCooldownPeriod
+                defaultCooldownPeriod: defaultCooldownPeriod,
+                evmTreasuryContractAddress: evmTreasuryContractAddress,
+                updateCOACapability: updateCOACapability
             ) as AnyStruct
         )
         
@@ -1199,18 +1245,59 @@ access(all) contract ToucanDAO {
             // Update configuration values if provided
             if configData.minVoteThreshold != nil {
                 self.minVoteThreshold = configData.minVoteThreshold!
+                log("Updated minVoteThreshold")
             }
             if configData.minimumQuorumNumber != nil {
                 self.minimumQuorumNumber = configData.minimumQuorumNumber!
+                log("Updated minimumQuorumNumber")
             }
             if configData.minimumProposalStake != nil {
                 self.minimumProposalStake = configData.minimumProposalStake!
+                log("Updated minimumProposalStake")
             }
             if configData.defaultVotingPeriod != nil {
                 self.defaultVotingPeriod = configData.defaultVotingPeriod!
+                log("Updated defaultVotingPeriod")
             }
             if configData.defaultCooldownPeriod != nil {
                 self.defaultCooldownPeriod = configData.defaultCooldownPeriod!
+                log("Updated defaultCooldownPeriod")
+            }
+            
+            // Update EVM Treasury contract address if provided
+            if configData.evmTreasuryContractAddress != nil {
+                self.evmTreasuryContractAddress = configData.evmTreasuryContractAddress
+                log("Updated evmTreasuryContractAddress: ".concat(configData.evmTreasuryContractAddress!))
+            }
+            
+            // Update COA capability if requested
+            if configData.updateCOACapability == true {
+                // Refresh COA capability from /public/evm on contract account
+                // Try to get the capability using storage controllers first (safer)
+                var coaCapFound: Capability<auth(EVM.Call) &EVM.CadenceOwnedAccount>? = nil
+                
+                let controllers = self.account.capabilities.storage.getControllers(forPath: /storage/evm)
+                for controller in controllers {
+                    if let cap = controller.capability as? Capability<auth(EVM.Call) &EVM.CadenceOwnedAccount> {
+                        coaCapFound = cap
+                        break
+                    }
+                }
+                
+                // If not found via controllers, try direct get from /public/evm
+                if coaCapFound == nil {
+                    // This will panic if not found, but we're in a proposal execution context
+                    // where this is expected to be set up
+                    let publicCap = self.account.capabilities.get<auth(EVM.Call) &EVM.CadenceOwnedAccount>(/public/evm)
+                    coaCapFound = publicCap
+                }
+                
+                if coaCapFound != nil {
+                    self.coaCapability = coaCapFound
+                    log("Updated COA capability from /public/evm")
+                } else {
+                    log("Warning: COA capability not found at /public/evm - capability not updated")
+                }
             }
             
             log("DAO configuration updated successfully")
