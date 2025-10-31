@@ -415,10 +415,12 @@ access(all) contract ToucanDAO {
     access(all) var minimumProposalStake: UFix64  // Minimum ToucanTokens required to create a proposal
     access(all) var defaultVotingPeriod: UFix64  // Default voting period in seconds
     access(all) var defaultCooldownPeriod: UFix64  // Default cooldown period in seconds
-    access(all) var evmTreasuryContractAddress: String?  // EVM address of the FlowTreasury contract (hex string without 0x)
+    access(all) var evmTreasuryContractAddress: String  // EVM address of the FlowTreasury contract (hex string without 0x)
     access(self) var coaCapability: Capability<auth(EVM.Call) &EVM.CadenceOwnedAccount>?  // Capability to the COA resource
 
-    init() {
+    init(
+        evmTreasuryContractAddress: String
+    ) {
         self.nextProposalId = 0
         self.proposals = {}
         self.members = {}
@@ -434,11 +436,13 @@ access(all) contract ToucanDAO {
         self.minVoteThreshold = 1  // At least 1 vote required
         self.minimumQuorumNumber = 3.0  // Minimum number of members that must vote (for non-admin proposals)
         self.minimumProposalStake = 10.0  // 10 ToucanTokens minimum stake
-        self.defaultVotingPeriod = 604800.0  // 7 days default
-        self.defaultCooldownPeriod = 86400.0  // 1 day default
-        self.evmTreasuryContractAddress = nil  // Set via UpdateConfig proposal
+        self.defaultVotingPeriod = 43200.0// 12 hours  604800.0  // 7 days default
+        self.defaultCooldownPeriod = 43200.0  // 12 hours 1 day default
         
-        // Try to automatically set COA capability if it exists on the contract account
+        // Set EVM Treasury contract address (required parameter)
+        self.evmTreasuryContractAddress = evmTreasuryContractAddress
+        
+        // Auto-detect and set COA capability if it exists on the contract account
         // This allows COA to be set up before contract deployment
         // If COA doesn't exist yet, it will be nil and can be set later via setCOACapability
         var coaCapabilityFound: Capability<auth(EVM.Call) &EVM.CadenceOwnedAccount>? = nil
@@ -499,6 +503,7 @@ access(all) contract ToucanDAO {
         access(all) let stakedFundsBalance: UFix64
         access(all) let memberCount: UInt64
         access(all) let nextProposalId: UInt64
+        access(all) let evmTreasuryContractAddress: String  // EVM address of FlowTreasury contract
         
         init(
             minVoteThreshold: UInt64,
@@ -509,7 +514,8 @@ access(all) contract ToucanDAO {
             treasuryBalance: UFix64,
             stakedFundsBalance: UFix64,
             memberCount: UInt64,
-            nextProposalId: UInt64
+            nextProposalId: UInt64,
+            evmTreasuryContractAddress: String
         ) {
             self.minVoteThreshold = minVoteThreshold
             self.minimumQuorumNumber = minimumQuorumNumber
@@ -520,6 +526,7 @@ access(all) contract ToucanDAO {
             self.stakedFundsBalance = stakedFundsBalance
             self.memberCount = memberCount
             self.nextProposalId = nextProposalId
+            self.evmTreasuryContractAddress = evmTreasuryContractAddress
         }
     }
     
@@ -534,7 +541,8 @@ access(all) contract ToucanDAO {
             treasuryBalance: 0.0,  // Note: Treasury now supports multiple token types - use getTreasuryBalance(vaultType) instead
             stakedFundsBalance: self.stakedFundsResource.vault.balance,
             memberCount: self.getMemberCount(),
-            nextProposalId: self.nextProposalId
+            nextProposalId: self.nextProposalId,
+            evmTreasuryContractAddress: self.evmTreasuryContractAddress
         )
     }
 
@@ -710,9 +718,9 @@ access(all) contract ToucanDAO {
         signer: auth(BorrowValue) &Account
     ) {
 
-        // Validate treasury contract address is set
+        // Validate treasury contract address is set (not the default empty address)
         assert(
-            self.evmTreasuryContractAddress != nil,
+            self.evmTreasuryContractAddress != "0000000000000000000000000000000000000000",
             message: "EVM Treasury contract address must be set in DAO configuration"
         )
         
@@ -1266,7 +1274,7 @@ access(all) contract ToucanDAO {
             
             // Update EVM Treasury contract address if provided
             if configData.evmTreasuryContractAddress != nil {
-                self.evmTreasuryContractAddress = configData.evmTreasuryContractAddress
+                self.evmTreasuryContractAddress = configData.evmTreasuryContractAddress!
                 log("Updated evmTreasuryContractAddress: ".concat(configData.evmTreasuryContractAddress!))
             }
             
@@ -1312,9 +1320,8 @@ access(all) contract ToucanDAO {
         let evmCallData = action.data as? EVMCallData
             ?? panic("Invalid EVMCallData in action")
         
-        // Validate treasury contract address is set
+        // Validate treasury contract address is set (no longer optional, so no need for ??)
         let treasuryAddressStr = self.evmTreasuryContractAddress
-            ?? panic("EVM Treasury contract address not configured")
         
         // Get COA from stored capability
         let coaCap = self.coaCapability

@@ -20,7 +20,7 @@ access(all) fun setup() {
     let daoErr = Test.deployContract(
         name: "ToucanDAO",
         path: "../contracts/ToucanDAO.cdc",
-        arguments: []
+        arguments: ["0000000000000000000000000000000000000000"]  // Default empty address (can be updated via UpdateConfig)
     )
     Test.expect(daoErr, Test.beNil())
     

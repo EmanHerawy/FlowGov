@@ -25,10 +25,11 @@ access(all) fun setup() {
     )
     Test.expect(err, Test.beNil())
 
+    // Deploy ToucanDAO with EVM treasury address (COA capability auto-detects if available)
     let err2 = Test.deployContract(
         name: "ToucanDAO",
         path: "../contracts/ToucanDAO.cdc",
-        arguments: []
+        arguments: ["0000000000000000000000000000000000000000"]  // Default empty address (can be updated via UpdateConfig)
     )
     Test.expect(err2, Test.beNil())
 }

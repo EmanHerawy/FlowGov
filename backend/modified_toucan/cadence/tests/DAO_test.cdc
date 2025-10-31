@@ -13,7 +13,7 @@ fun setup() {
     let err = Test.deployContract(
         name: "ToucanDAO",
         path: "../contracts/ToucanDAO.cdc",
-        arguments: []
+        arguments: ["0000000000000000000000000000000000000000"]  // Default empty address (can be updated via UpdateConfig)
     )
     Test.expect(err, Test.beNil())
 }
@@ -42,8 +42,9 @@ fun testConfigurationValues() {
     Test.assertEqual(UInt64(1), config.minVoteThreshold)
     Test.assertEqual(3.0, config.minimumQuorumNumber)
     Test.assertEqual(10.0, config.minimumProposalStake)
-    Test.assertEqual(604800.0, config.defaultVotingPeriod)
-    Test.assertEqual(86400.0, config.defaultCooldownPeriod)
+    Test.assertEqual(43200.0, config.defaultVotingPeriod)  // 12 hours (updated default)
+    Test.assertEqual(43200.0, config.defaultCooldownPeriod)  // 12 hours (updated default)
+    Test.assertEqual("0000000000000000000000000000000000000000", config.evmTreasuryContractAddress)  // Default empty address
     
     // Test initial state values
     Test.assertEqual(0.0, config.treasuryBalance)
