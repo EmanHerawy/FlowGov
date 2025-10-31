@@ -57,6 +57,13 @@ transaction(
                 from: /storage/flowTokenVault
             ) ?? panic("Could not borrow FlowToken Vault")
             
+            // Check balance before attempting withdrawal
+            let balance = vault.balance
+            assert(
+                balance >= fundingAmount,
+                message: "Insufficient FLOW balance. Requested: ".concat(fundingAmount.toString()).concat(", Available: ").concat(balance.toString())
+            )
+            
             let fundingVault <- vault.withdraw(amount: fundingAmount) as! @FlowToken.Vault
             self.coa.deposit(from: <-fundingVault)
             

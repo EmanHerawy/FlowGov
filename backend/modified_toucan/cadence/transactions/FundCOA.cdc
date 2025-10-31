@@ -25,6 +25,13 @@ transaction(amount: UFix64) {
             from: /storage/flowTokenVault
         ) ?? panic("Could not borrow FlowToken Vault. Make sure account has FlowToken vault set up.")
         
+        // Check balance before attempting withdrawal
+        let balance = vault.balance
+        assert(
+            balance >= amount,
+            message: "Insufficient FLOW balance. Requested: ".concat(amount.toString()).concat(", Available: ").concat(balance.toString())
+        )
+        
         // Withdraw FLOW tokens and deposit into COA
         let fundingVault <- vault.withdraw(amount: amount) as! @FlowToken.Vault
         self.coa.deposit(from: <-fundingVault)

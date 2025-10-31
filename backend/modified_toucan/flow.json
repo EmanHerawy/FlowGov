@@ -9,7 +9,8 @@
 		"ToucanDAO": {
 			"source": "cadence/contracts/ToucanDAO.cdc",
 			"aliases": {
-				"testing": "0000000000000007"
+				"testing": "0000000000000007",
+				"testnet": "d020ccc9daaea77d"
 			}
 		},
 		"ToucanToken": {
@@ -136,7 +137,6 @@
 		"testnet": "access.devnet.nodes.onflow.org:9000"
 	},
 	"accounts": {
-
 		"dev-account": {
 			"address": "d020ccc9daaea77d",
 			"key": {
