@@ -32,6 +32,10 @@ This directory contains shell scripts that simulate various workflows and scenar
 - **`04_proposal_cancellation.sh`** - Cancellation in different states
 - **`05_multiple_proposals.sh`** - Managing multiple proposals simultaneously
 
+### EVM Integration
+- **`12_setup_coa.sh`** - Setup Cadence-Owned Account (COA) and deploy FlowTreasury contract
+- **`13_evm_call_proposal_e2e.sh`** - End-to-end EVM call proposal workflow
+
 ### Querying
 - **`07_voting_scenarios.sh`** - Various voting scenarios and status checks
 - **`08_dao_state_queries.sh`** - Comprehensive DAO state queries
@@ -46,6 +50,55 @@ This directory contains shell scripts that simulate various workflows and scenar
 
 ### Master Script
 - **`10_comprehensive_test.sh`** - Runs all scenarios in sequence
+
+## EVM Integration Features
+
+### Overview
+ToucanDAO now supports executing arbitrary EVM contract calls through Cadence-Owned Accounts (COAs). This enables the DAO to interact with EVM contracts deployed on Flow EVM.
+
+**Important Note**: Unlike Ethereum DAOs, Cadence contracts cannot execute arbitrary bytecode or arbitrary data directly. However, by leveraging Flow's EVM integration through COAs, the DAO can achieve similar functionality:
+- Cadence provides type safety and resource-oriented security
+- EVM enables execution of arbitrary Solidity contract calls
+- The combination allows DAO governance over EVM contracts while maintaining Cadence's security guarantees
+
+### EVM Features
+1. **FlowTreasury Contract**: Solidity contract that executes arbitrary calls to multiple addresses
+2. **COA Management**: Cadence-Owned Accounts enable Cadence to control EVM accounts
+3. **EVM Call Proposals**: New proposal type (`ProposalType.EVMCall`) for executing EVM contract calls
+4. **Governance Control**: Update EVM treasury address and COA capability via UpdateConfig proposals
+
+### EVM Workflow
+1. **Setup COA**: Run `12_setup_coa.sh` to create COA and optionally deploy FlowTreasury
+2. **Configure DAO**: Use UpdateConfig proposal to set FlowTreasury address and refresh COA capability
+3. **Create EVM Proposal**: Create proposals with targets, values, function signatures, and arguments
+4. **Execute**: Upon proposal passing, DAO executes EVM calls through COA
+
+### EVM Scripts Usage
+
+#### Setup COA and Deploy FlowTreasury
+```bash
+# Setup COA with optional FlowTreasury deployment
+./simulation/12_setup_coa.sh [NETWORK] [SIGNER]
+
+# Example: Setup on testnet
+./simulation/12_setup_coa.sh testnet dao-admin
+```
+
+#### EVM Call Proposal E2E
+```bash
+# Complete end-to-end EVM call proposal workflow
+./simulation/13_evm_call_proposal_e2e.sh [NETWORK] [SIGNER] [TREASURY_ADDRESS]
+
+# Example: Full workflow on emulator
+./simulation/13_evm_call_proposal_e2e.sh emulator emulator-account 0xAABBCCDD...
+```
+
+### EVM Transactions
+- **`SetupCOA.cdc`**: Create COA, fund it, and optionally deploy EVM contracts
+- **`FundCOA.cdc`**: Send FLOW tokens to an existing COA
+- **`SetCOACapability.cdc`**: Manually set COA capability in DAO (auto-set during init if COA exists)
+- **`CreateEVMCallProposal.cdc`**: Create proposal to execute EVM contract calls
+- **`CreateUpdateConfigProposal.cdc`**: Update EVM treasury address and refresh COA capability
 
 ## Usage
 
@@ -170,6 +223,11 @@ To use different account names (alice, bob, charlie, etc.):
 - **Cancelled**: Cancelled by proposer
 - **Expired**: Voting period ended with no votes
 
+### Proposal Types
+- **WithdrawTreasury**: Withdraw tokens from DAO treasury
+- **AdminBasedOperation**: Admin-only operations (Add/Remove Member, Update Config)
+- **EVMCall**: Execute arbitrary EVM contract calls through COA
+
 ### Voting Rules
 - Only ToucanToken holders can vote
 - Admin operations require 2/3 of total members to vote
@@ -180,6 +238,7 @@ To use different account names (alice, bob, charlie, etc.):
 - Proposals execute automatically via Transaction Scheduler
 - Execution happens after cooldown period ends
 - Depositor receives refund after execution
+- **EVM Calls**: Individual call failures don't revert entire proposal execution (matches FlowTreasury behavior)
 
 ## Troubleshooting
 
@@ -188,6 +247,9 @@ To use different account names (alice, bob, charlie, etc.):
 3. **"Not a member"**: Admin operations require the account to be a member first
 4. **"Handler not found"**: Run `InitToucanDAOTransactionHandler.cdc` first
 5. **"Proposal not found"**: Check proposal ID (starts at 0)
+6. **"COA capability not set"**: Run `SetupCOA.cdc` on DAO contract account, or set via UpdateConfig proposal
+7. **"EVM Treasury contract address not configured"**: Set via UpdateConfig proposal with `evmTreasuryContractAddress` field
+8. **"COA not found"**: Ensure COA is set up at `/storage/evm` on the DAO contract account using `SetupCOA.cdc`
 
 ## Notes
 
@@ -197,4 +259,25 @@ To use different account names (alice, bob, charlie, etc.):
 - Scripts are designed to be run sequentially
 - For multi-account testing, create accounts first and use different signers
 - For production deployments, always review contract code and test thoroughly on testnet first
+
+### Cadence vs EVM Execution Model
+
+**Cadence Limitations:**
+- Cadence is a resource-oriented language with strict type safety
+- Cannot execute arbitrary bytecode or arbitrary data directly
+- All operations must be statically verified at compile time
+- Provides strong security guarantees but limits flexibility
+
+**EVM Integration Solution:**
+- Flow EVM enables execution of arbitrary Solidity contract calls
+- COAs (Cadence-Owned Accounts) bridge Cadence and EVM
+- DAO can propose and execute arbitrary EVM calls through governance
+- Combines Cadence's security model with EVM's flexibility
+- Allows DAO to interact with any EVM contract while maintaining governance control
+
+**Use Cases:**
+- Execute arbitrary function calls on deployed EVM contracts
+- Batch multiple EVM operations in a single proposal
+- Interact with DeFi protocols deployed on Flow EVM
+- Upgrade or configure EVM contracts through DAO governance
 
