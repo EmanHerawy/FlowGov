@@ -31,11 +31,17 @@ transaction(
             // 2. Save it to storage
             signer.storage.save(<-newCOA, to: /storage/evm)
             
-            // 3. Create and publish public capability (only if new COA)
-            let coaCapability = signer.capabilities.storage.issue<&EVM.CadenceOwnedAccount>(/storage/evm)
-            signer.capabilities.publish(coaCapability, at: /public/evm)
+            // 3. Create and publish public capabilities (only if new COA)
+            // Issue capability with auth(EVM.Call) entitlement for DAO to use
+            let authCoaCapability = signer.capabilities.storage.issue<auth(EVM.Call) &EVM.CadenceOwnedAccount>(/storage/evm)
+            signer.capabilities.publish(authCoaCapability, at: /public/evm)
+            
+            // Also publish a non-auth capability for read-only access if needed
+            let publicCoaCapability = signer.capabilities.storage.issue<&EVM.CadenceOwnedAccount>(/storage/evm)
+            signer.capabilities.publish(publicCoaCapability, at: /public/evmReadOnly)
             
             log("New COA created and saved")
+            log("COA capability with auth(EVM.Call) published at /public/evm")
         }
         
         // Borrow COA with required entitlements for funding and deployment
