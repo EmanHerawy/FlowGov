@@ -1,27 +1,19 @@
 import "EVM"
 
-/// Script to get the COA address for a given account
-/// Returns the EVM address of the COA if it exists
-/// Note: This script uses public capabilities to access the COA
+/// Script to get the COA address from a Flow account
+/// The COA address is the EVM address associated with the Cadence-Owned Account
+///
+/// Parameters:
+/// - accountAddress: Flow account address that has a COA
+///
+/// Returns: The COA EVM address as a hex string (without 0x prefix)
 access(all) fun main(accountAddress: Address): String? {
     let account = getAccount(accountAddress)
     
-    // Try to borrow COA from public capability at /public/evm
-    let publicCap = account.capabilities.get<&EVM.CadenceOwnedAccount>(/public/evm)
-    if publicCap != nil {
-        if let coaRef = publicCap!.borrow() {
-            return coaRef.address().toString()
-        }
-    }
-    
-    // If main capability not available, try read-only capability
-    let readOnlyCap = account.capabilities.get<&EVM.CadenceOwnedAccount>(/public/evmReadOnly)
-    if readOnlyCap != nil {
-        if let coaRef = readOnlyCap!.borrow() {
-            return coaRef.address().toString()
-        }
+    // Try to borrow COA from storage
+    if let coa = account.storage.borrow<&EVM.CadenceOwnedAccount>(from: /storage/evm) {
+        return coa.address().toString()
     }
     
     return nil
 }
-
