@@ -1247,6 +1247,29 @@ The EVM integration provides **unprecedented flexibility** for DAO governance:
 
 All screenshots below are from our **live, deployed system** on Flow Testnet, demonstrating real functionality!
 
+#### Recent Updates & Key Features
+
+<img src="docs/screenshots/image copy 7.png" alt="Proposal Details" width="800" style="border: 2px solid #ddd; border-radius: 8px; margin: 10px 0; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+
+*Detailed proposal information and voting status display*
+
+<img src="docs/screenshots/image copy 8.png" alt="Governance Features" width="800" style="border: 2px solid #ddd; border-radius: 8px; margin: 10px 0; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+
+*Advanced governance features and proposal management interface*
+
+<img src="docs/screenshots/image copy 9.png" alt="System Overview" width="800" style="border: 2px solid #ddd; border-radius: 8px; margin: 10px 0; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+
+*Complete system overview showing integrated components and workflow*
+
+<img src="docs/screenshots/image copy 10.png" alt="EVM Operations" width="800" style="border: 2px solid #ddd; border-radius: 8px; margin: 10px 0; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+
+*EVM operations dashboard showing cross-chain governance capabilities*
+
+<img src="docs/screenshots/image copy 11.png" alt="Transaction Monitoring" width="800" style="border: 2px solid #ddd; border-radius: 8px; margin: 10px 0; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+
+*Real-time transaction monitoring and automated execution tracking*
+
+#### Frontend & User Interface
 
 <img src="docs/screenshots/image.png" alt="FlowGov Dashboard" width="800" style="border: 2px solid #ddd; border-radius: 8px; margin: 10px 0; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
 
@@ -1256,6 +1279,7 @@ All screenshots below are from our **live, deployed system** on Flow Testnet, de
 
 *Proposal creation and management interface with intuitive user experience*
 
+#### Smart Contract Execution & Verification
 
 <img src="docs/screenshots/image copy 2.png" alt="Smart Contract Execution" width="800" style="border: 2px solid #ddd; border-radius: 8px; margin: 10px 0; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
 
@@ -1265,6 +1289,7 @@ All screenshots below are from our **live, deployed system** on Flow Testnet, de
 
 *Detailed transaction information showing trustless automated execution and verification*
 
+#### EVM Integration & Cross-Chain Governance
 
 <img src="docs/screenshots/image copy 4.png" alt="EVM Integration" width="800" style="border: 2px solid #ddd; border-radius: 8px; margin: 10px 0; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
 
@@ -1274,8 +1299,12 @@ All screenshots below are from our **live, deployed system** on Flow Testnet, de
 
 *EVM call proposal execution successfully completed through COA, enabling arbitrary EVM contract calls*
 
+#### Testnet Deployment & Architecture
 
 <img src="docs/screenshots/image copy 6.png" alt="Testnet Deployment" width="800" style="border: 2px solid #ddd; border-radius: 8px; margin: 10px 0; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
 
+*Testnet deployment verification showing all contracts operational on Flow Testnet*
 
 <img src="docs/screenshots/telegram-cloud-photo-size-4-5773814945534381253-y.jpg" alt="System Architecture" width="800" style="border: 2px solid #ddd; border-radius: 8px; margin: 10px 0; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+
+*FlowGov system architecture showing component integration and data flow*
