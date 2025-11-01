@@ -1,0 +1,254 @@
+{
+    "proposals": [
+      {
+        "title": "Flow University Blockchain Bootcamp Series",
+        "description": "A comprehensive 12-week bootcamp program for university students to learn Flow blockchain development, including Cadence programming, smart contract deployment, and dApp creation. The program will serve 100 students across 5 universities with mentorship from experienced Flow developers.",
+        "amount": 25000.0
+      },
+      {
+        "title": "Refugee Tech Skills Program - Blockchain Edition",
+        "description": "Empowering refugees with blockchain development skills through a 6-month intensive training program. Participants will learn Flow development, receive job placement assistance, and build portfolio projects. The program aims to provide economic opportunities for 50 refugee participants.",
+        "amount": 45000.0
+      },
+      {
+        "title": "Flow Community Hackathon - Global Edition",
+        "description": "Organizing a worldwide virtual hackathon focused on building innovative dApps on Flow blockchain. The event will span 48 hours, include workshops, mentorship sessions, and prize pools for winners in categories like DeFi, NFTs, Gaming, and Social Impact.",
+        "amount": 35000.0
+      },
+      {
+        "title": "Open Source Flow Development Tools",
+        "description": "Building essential open-source developer tools for the Flow ecosystem including enhanced debugging tools, testing frameworks, and deployment automation scripts. These tools will reduce development friction and accelerate project delivery for all Flow developers.",
+        "amount": 30000.0
+      },
+      {
+        "title": "Flow Blockchain Education in Underserved Communities",
+        "description": "Bringing blockchain education to 10 underserved communities through free workshops, providing laptops, internet access, and curriculum materials. The initiative focuses on teaching Flow basics, wallet setup, and introducing career opportunities in Web3.",
+        "amount": 28000.0
+      },
+      {
+        "title": "Student NFT Marketplace for Digital Art",
+        "description": "Creating a dedicated NFT marketplace on Flow for student artists to showcase and sell their digital artwork. The platform will include zero-fee minting for students, educational resources, and integration with university art programs across 20 institutions.",
+        "amount": 22000.0
+      },
+      {
+        "title": "Flow Developer Documentation Translation Project",
+        "description": "Translating Flow's official documentation into 15 languages including Spanish, Mandarin, Arabic, French, Hindi, Portuguese, and more. This project will make Flow accessible to millions of non-English speaking developers worldwide.",
+        "amount": 18000.0
+      },
+      {
+        "title": "Refugee Support DAO on Flow",
+        "description": "Establishing a decentralized autonomous organization to coordinate and fund refugee support initiatives globally. The DAO will enable transparent fund distribution, community governance, and direct aid delivery using Flow's fast and cost-effective blockchain infrastructure.",
+        "amount": 50000.0
+      },
+      {
+        "title": "Weekly Flow Community Meetups - 20 Cities",
+        "description": "Organizing weekly in-person meetups in 20 major cities worldwide for Flow developers and enthusiasts. Each meetup will feature presentations, networking opportunities, and hands-on coding sessions to strengthen the Flow community.",
+        "amount": 32000.0
+      },
+      {
+        "title": "Flow Gaming Ecosystem Development Grant",
+        "description": "Supporting the development of 5 innovative blockchain gaming projects on Flow. Selected projects will receive funding, technical mentorship, marketing support, and access to Flow gaming infrastructure to create engaging player experiences.",
+        "amount": 75000.0
+      },
+      {
+        "title": "Student Ambassador Program for Flow",
+        "description": "Recruiting and training 100 student ambassadors across universities globally to promote Flow blockchain. Ambassadors will organize events, create content, mentor peers, and receive stipends, training materials, and exclusive Flow merchandise.",
+        "amount": 24000.0
+      },
+      {
+        "title": "Flow Blockchain for Social Good Conference",
+        "description": "Hosting a 3-day international conference focused on using Flow blockchain for social impact initiatives. The conference will bring together 500 attendees including nonprofits, developers, and social entrepreneurs to explore blockchain solutions for global challenges.",
+        "amount": 55000.0
+      },
+      {
+        "title": "Decentralized Identity Solution for Refugees",
+        "description": "Developing a secure, portable digital identity system on Flow blockchain for refugees who lack traditional documentation. This solution will enable refugees to prove their identity, access services, and maintain important records across borders.",
+        "amount": 65000.0
+      },
+      {
+        "title": "Flow Kids Coding Camp",
+        "description": "A summer camp program teaching children ages 10-16 the basics of blockchain technology and programming through gamified lessons using Flow. The camp will run in 15 locations, serving 500 children with scholarships available for low-income families.",
+        "amount": 38000.0
+      },
+      {
+        "title": "Community-Driven Flow Improvement Proposals Platform",
+        "description": "Building a dedicated platform for community members to submit, discuss, and vote on Flow improvement proposals. The platform will include discussion forums, voting mechanisms, and proposal tracking to enhance community governance.",
+        "amount": 20000.0
+      },
+      {
+        "title": "Flow Blockchain YouTube Educational Series",
+        "description": "Producing a comprehensive 100-episode YouTube series covering everything from Flow basics to advanced Cadence development. Episodes will include tutorials, interviews with builders, project showcases, and weekly news updates about the Flow ecosystem.",
+        "amount": 42000.0
+      },
+      {
+        "title": "Women in Web3 - Flow Chapter",
+        "description": "Establishing a dedicated program to support women entering the Flow ecosystem through mentorship, networking events, skill-building workshops, and funding opportunities for women-led projects. The initiative aims to improve gender diversity in the Flow community.",
+        "amount": 30000.0
+      },
+      {
+        "title": "Flow Smart Contract Auditing Service for Students",
+        "description": "Providing free smart contract security audits for student-developed projects on Flow. This service will help students learn security best practices, identify vulnerabilities, and safely launch their projects while building a culture of security awareness.",
+        "amount": 25000.0
+      },
+      {
+        "title": "Regional Flow Developer Conferences - Asia Pacific",
+        "description": "Organizing regional developer conferences in 5 major Asia Pacific cities including Singapore, Tokyo, Seoul, Bangkok, and Sydney. Each conference will feature technical workshops, networking, and showcase opportunities for local Flow projects.",
+        "amount": 48000.0
+      },
+      {
+        "title": "Flow Ecosystem Analytics Dashboard",
+        "description": "Creating a comprehensive, open-source analytics dashboard tracking Flow ecosystem metrics including active developers, dApp usage, transaction volumes, TVL, and community growth. The dashboard will provide valuable insights for builders and investors.",
+        "amount": 22000.0
+      },
+      {
+        "title": "Refugee Microfinance Platform on Flow",
+        "description": "Developing a microfinance platform on Flow blockchain that connects refugees with lenders globally. The platform will enable refugees to access small loans for starting businesses, with transparent terms and built-in repayment tracking.",
+        "amount": 55000.0
+      },
+      {
+        "title": "Flow Developer Grant Matching Program",
+        "description": "A matching fund program that doubles community contributions to promising Flow projects. For every dollar donated by community members, the program matches it, incentivizing community-driven funding and increasing support for innovative builders.",
+        "amount": 100000.0
+      },
+      {
+        "title": "High School Flow Blockchain Curriculum",
+        "description": "Developing a comprehensive blockchain curriculum tailored for high school students, complete with lesson plans, teaching materials, hands-on projects, and teacher training. The curriculum will be distributed to 100 schools in the first year.",
+        "amount": 35000.0
+      },
+      {
+        "title": "Flow Community Newsletter and Media Hub",
+        "description": "Launching a weekly newsletter and media hub covering Flow ecosystem news, project launches, developer spotlights, technical tutorials, and community events. The platform will serve as the central information source for the Flow community.",
+        "amount": 18000.0
+      },
+      {
+        "title": "Decentralized Science Platform on Flow",
+        "description": "Building a decentralized science platform where researchers can publish papers, share data, and collaborate globally using Flow blockchain. The platform will support academic refugees and students with free access to scientific resources and publishing opportunities.",
+        "amount": 45000.0
+      },
+      {
+        "title": "Flow Mobile App Development Bootcamp",
+        "description": "An intensive 8-week bootcamp teaching students how to build mobile applications that interact with Flow blockchain. Students will learn React Native, Flow SDK integration, and best practices for mobile Web3 app development.",
+        "amount": 28000.0
+      },
+      {
+        "title": "Community Art Gallery on Flow",
+        "description": "Creating a decentralized art gallery where community members can exhibit digital artwork as NFTs on Flow. The gallery will host monthly exhibitions, support emerging artists, and dedicate 30% of sales to charitable causes supporting refugees.",
+        "amount": 25000.0
+      },
+      {
+        "title": "Flow Bug Bounty Program",
+        "description": "Establishing a comprehensive bug bounty program to identify and fix security vulnerabilities in Flow ecosystem projects. The program will reward security researchers and ethical hackers, strengthening overall ecosystem security.",
+        "amount": 60000.0
+      },
+      {
+        "title": "Student-Led Flow Research Initiative",
+        "description": "Funding 20 student research projects exploring innovative use cases for Flow blockchain in areas like supply chain, healthcare, education, and governance. Selected students receive grants, mentorship, and opportunities to present findings at conferences.",
+        "amount": 40000.0
+      },
+      {
+        "title": "Flow Blockchain Podcast Series",
+        "description": "Producing a weekly podcast featuring interviews with Flow developers, founders, and community leaders. Episodes will explore technical topics, share success stories, discuss challenges, and promote upcoming projects in the Flow ecosystem.",
+        "amount": 15000.0
+      },
+      {
+        "title": "Humanitarian Aid Tracking System on Flow",
+        "description": "Developing a transparent aid tracking system on Flow blockchain for humanitarian organizations working with refugees. The system will ensure donations reach intended recipients, reduce fraud, and provide real-time reporting to donors.",
+        "amount": 50000.0
+      },
+      {
+        "title": "Flow Developer Mentorship Program",
+        "description": "Connecting experienced Flow developers with 200 beginners for 6-month mentorship relationships. Mentors will receive stipends, while mentees gain hands-on guidance, code reviews, and career advice to accelerate their Web3 development journey.",
+        "amount": 32000.0
+      },
+      {
+        "title": "Community Gaming Tournament on Flow",
+        "description": "Organizing monthly gaming tournaments featuring Flow blockchain games with prize pools, live streaming, and community engagement. Tournaments will showcase Flow gaming capabilities and attract new users to the ecosystem.",
+        "amount": 20000.0
+      },
+      {
+        "title": "Flow Environmental Sustainability Initiative",
+        "description": "Research and development project focused on measuring and optimizing Flow's environmental impact. The initiative will produce sustainability reports, carbon offset programs, and educational materials about blockchain's environmental considerations.",
+        "amount": 25000.0
+      },
+      {
+        "title": "Legal Aid DAO for Refugees on Flow",
+        "description": "Creating a decentralized platform connecting refugee populations with volunteer lawyers globally. The DAO will coordinate legal support, manage case tracking, and facilitate secure document sharing, all powered by Flow blockchain.",
+        "amount": 45000.0
+      },
+      {
+        "title": "Flow Developer Certification Program",
+        "description": "Establishing a professional certification program for Flow developers with multiple levels from beginner to expert. The program includes comprehensive training, examinations, and official certification recognized by employers in the Web3 space.",
+        "amount": 35000.0
+      },
+      {
+        "title": "Community-Driven Flow Marketing Campaign",
+        "description": "A grassroots marketing initiative empowering community members to create and share Flow content across social media. Participants receive rewards for high-quality content, increasing Flow's visibility and attracting new developers and users.",
+        "amount": 30000.0
+      },
+      {
+        "title": "Flow Blockchain Healthcare Records for Refugees",
+        "description": "Building a secure healthcare record system on Flow blockchain enabling refugees to maintain portable medical records across borders. The system ensures privacy, interoperability with healthcare providers, and emergency access features.",
+        "amount": 55000.0
+      },
+      {
+        "title": "Student Startup Incubator on Flow",
+        "description": "A 6-month incubator program supporting 15 student-led startups building on Flow blockchain. Selected teams receive funding, workspace, mentorship, legal support, and connections to investors and potential partners.",
+        "amount": 75000.0
+      },
+      {
+        "title": "Flow Community Open Source Library",
+        "description": "Developing and maintaining a curated library of open-source code examples, templates, and reusable components for Flow developers. The library will accelerate development time and promote code quality across the ecosystem.",
+        "amount": 20000.0
+      },
+      {
+        "title": "Virtual Reality Flow Developer Conference",
+        "description": "Hosting an immersive VR conference where developers worldwide can attend workshops, network, and collaborate in a virtual environment. The conference will feature virtual exhibition halls showcasing Flow projects and interactive technical sessions.",
+        "amount": 40000.0
+      },
+      {
+        "title": "Flow Blockchain Job Board and Talent Network",
+        "description": "Creating a dedicated job platform connecting Flow developers with opportunities across the ecosystem. The platform will include job listings, freelance opportunities, talent profiles, and resources for refugees and students entering Web3 careers.",
+        "amount": 18000.0
+      },
+      {
+        "title": "Student Financial Literacy Program with Flow",
+        "description": "Teaching financial literacy to 5,000 students using Flow blockchain as a practical learning tool. Students will learn about savings, investments, DeFi, and responsible financial management through hands-on experience with digital assets.",
+        "amount": 28000.0
+      },
+      {
+        "title": "Flow Community Governance Enhancement Project",
+        "description": "Improving Flow's community governance mechanisms through research, tool development, and process optimization. The project will increase community participation in decision-making and make governance more accessible to all stakeholders.",
+        "amount": 25000.0
+      },
+      {
+        "title": "Multilingual Flow Support Community",
+        "description": "Establishing dedicated support channels in 10 languages staffed by community volunteers. The program will provide technical assistance, answer questions, and onboard new users globally, making Flow accessible to non-English speaking communities.",
+        "amount": 22000.0
+      },
+      {
+        "title": "Flow Ecosystem Collaboration Platform",
+        "description": "Building a platform where Flow projects can find collaborators, share resources, cross-promote, and coordinate on ecosystem-wide initiatives. The platform will include project directories, partnership matching, and resource sharing features.",
+        "amount": 30000.0
+      },
+      {
+        "title": "Refugee Education Credentials on Flow",
+        "description": "Developing a system for storing and verifying educational credentials on Flow blockchain, helping refugee students prove their qualifications when continuing education or seeking employment in new countries. The system ensures credential authenticity and portability.",
+        "amount": 42000.0
+      },
+      {
+        "title": "Flow Community Grants Program Administration",
+        "description": "Funding the operations of a community-led grants program including application review, milestone tracking, disbursement management, and impact reporting. This ensures efficient allocation of resources to high-impact Flow ecosystem projects.",
+        "amount": 35000.0
+      },
+      {
+        "title": "Interactive Flow Learning Platform",
+        "description": "Creating an interactive online learning platform with gamified lessons, coding challenges, and real-time feedback for learning Flow and Cadence. The platform will offer free access to students and refugees, with achievement badges and completion certificates.",
+        "amount": 38000.0
+      },
+      {
+        "title": "Flow Ecosystem Annual Impact Report",
+        "description": "Producing a comprehensive annual report documenting Flow ecosystem growth, community initiatives impact, environmental sustainability, social good projects, and future roadmap. The report will showcase Flow's contributions to blockchain adoption and social impact globally.",
+        "amount": 20000.0
+      }
+    ]
+  }

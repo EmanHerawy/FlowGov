@@ -1,0 +1,8 @@
+# flow
+emulator-account.pkey
+imports
+.env
+.pkey
+*.pkey
+user-*.pkey
+dev-account.pkey
