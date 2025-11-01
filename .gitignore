@@ -33,6 +33,12 @@
 **/testnet-account.pkey
 **/toucans-test.pkey
 
+# Testnet account files with private keys
+**/simulation/logs/testnet_accounts.json
+**/simulation/logs/accounts_backup.txt
+**/simulation/logs/*_accounts.json
+**/simulation/logs/*account*.json
+
 # Flow imports (generated directories)
 **/imports/
 **/imports/**
@@ -129,6 +135,9 @@ yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
 
+# Simulation logs (may contain private keys - CRITICAL!)
+**/simulation/logs/
+
 # ============================================
 # Testing
 # ============================================
@@ -177,4 +186,17 @@ coverage/
 coverage.json
 coverage/
 gas_report.txt
+
+# ============================================
+# Simulation Logs (may contain private keys)
+# ============================================
+# Testnet account files with private keys (CRITICAL - never commit!)
+**/simulation/logs/testnet_accounts.json
+**/simulation/logs/accounts_backup.txt
+**/simulation/logs/private_keys_backup.txt
+**/simulation/logs/*_accounts.json
+**/simulation/logs/*account*.json
+**/simulation/logs/*private*.txt
+**/simulation/logs/*key*.txt
+**/simulation/logs/*key*.json
 
