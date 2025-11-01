@@ -28,7 +28,7 @@
 		}
 	};
 
-	let imgSrc = nftCollection.image ?? '/toucans-illustration.png';
+	let imgSrc = nftCollection.image ?? '/flowgov-illustration.png';
 </script>
 
 <div

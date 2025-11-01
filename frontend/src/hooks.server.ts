@@ -14,7 +14,7 @@ export const handle: Handle = async ({ event, resolve }) => {
 
 			// Make sure the cookie was found, if not, set it to dark
 			if (!currentTheme) {
-				// default theme for Toucans
+				// default theme for FlowGov
 				currentTheme = "dark";
 			}
 

@@ -4,7 +4,7 @@ const homeDaos: DaoDatabaseData[] = [
   {
     contract_address: '0x5643fd47a29770e7',
     created_at: '',
-    description: "The first DAO on the Flow blockchain. The creators of Toucans.",
+    description: "The first DAO on the Flow blockchain. The creators of FlowGov.",
     long_description: undefined,
     discord: 'https://discord.gg/emerald-city-906264258189332541',
     logo: 'https://i.imgur.com/dsPY3ct.png',

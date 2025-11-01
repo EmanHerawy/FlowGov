@@ -1,5 +1,5 @@
 import { fetchDaoRankings } from '$lib/utilities/api/supabase/fetchDaoRankings';
-import { fetchAllToucansProjects } from '$lib/utilities/api/supabase/fetchAllToucansProjects';
+import { fetchAllFlowGovProjects } from '$lib/utilities/api/supabase/fetchAllToucansProjects';
 import type { PageLoad } from './$types';
 import type { DAOProject } from '$lib/types/dao-project/dao-project.interface';
 import type { DaoRankingData } from '$lib/features/dao-ranking/types/dao-ranking-data.interface';
@@ -7,7 +7,7 @@ import type { DaoRankingData } from '$lib/features/dao-ranking/types/dao-ranking
 export const ssr = false;
 
 export const load: PageLoad = async () => {
-	const allProjects = await fetchAllToucansProjects();
+	const allProjects = await fetchAllFlowGovProjects();
 	const rankings = await fetchDaoRankings();
 
 	function calculateScore(project: DaoRankingData) {

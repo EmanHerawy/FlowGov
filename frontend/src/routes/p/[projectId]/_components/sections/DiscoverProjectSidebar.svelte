@@ -24,7 +24,7 @@
 			/>
 		{:else}
 			<img
-				src="/toucans-illustration.png"
+				src="/flowgov-illustration.png"
 				alt="Default background illustration"
 				class="banner-image"
 			/>
