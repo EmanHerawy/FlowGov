@@ -574,7 +574,35 @@ Leverages Flow's Forte network upgrade to enable composability and automation fo
 
 ```
 flow-gove/
-├── frontend/                       # SvelteKit frontend with AI agent
+├── frontend/                       # SvelteKit frontend
+│   ├── src/
+│   │   ├── lib/
+│   │   │   ├── features/
+│   │   │   │   ├── dao-agent/      ⭐ NEW: AI governance agent feature
+│   │   │   │   │   ├── components/  ⭐ NEW: Chat UI (DaoAgentButton, DaoAgentChat, DaoAgentContainer)
+│   │   │   │   │   ├── stores/     ⭐ NEW: AgentStore for state management
+│   │   │   │   │   ├── types/      ⭐ NEW: TypeScript interfaces
+│   │   │   │   │   └── utils/      ⭐ NEW: setDaoContext utility
+│   │   │   │   ├── dao-generator/   # DAO creation wizard (original)
+│   │   │   │   ├── multisig-manager/ # Multi-signature treasury (original)
+│   │   │   │   ├── voting-rounds/   # Proposal and voting UI (original)
+│   │   │   │   └── users/           # User profiles (original)
+│   │   │   ├── components/          # Reusable UI components (original)
+│   │   │   ├── stores/              # Svelte stores (original)
+│   │   │   └── utilities/          # Helper functions (original)
+│   │   ├── routes/
+│   │   │   ├── api/
+│   │   │   │   └── dao-agent/      ⭐ NEW: +server.ts (AI agent API endpoint)
+│   │   │   ├── p/[projectId]/      
+│   │   │   │   └── +page.svelte    ⭐ Modified: Added DAO context for AI agent
+│   │   │   ├── admin/              # Admin dashboard (original)
+│   │   │   ├── discover/           # DAO discovery (original)
+│   │   │   └── +layout.svelte     ⭐ Modified: Integrated DaoAgentContainer
+│   │   └── flow/                   # Flow blockchain integration (original)
+│   │       └── cadence/            # Cadence scripts & transactions (original)
+│   ├── package.json                # Dependencies
+│   ├── svelte.config.js           # SvelteKit configuration
+│   
 ├── backend/
 │   └── modified_toucan/            # ToucanDAO smart contracts (governance-focused fork)
 │       ├── cadence/
@@ -614,7 +642,10 @@ flow-gove/
 │       │   ├── fund_accounts_from_faucet.sh ⭐ NEW: Faucet funding
 │       │   └── proposals.json ⭐ NEW: Proposal templates
 │       ├── test/                    # Foundry tests
-│       │   └── FlowTreasuryWithOwner.t.sol ⭐ NEW: Treasury contract tests
+│       │   ├── FlowTreasuryWithOwner.t.sol ⭐ NEW: Treasury contract tests
+│       │   └── EVMCallProposal_test.t.sol ⭐ NEW: EVM call proposal tests
+│       ├── cadence/tests/            # Cadence tests
+│       │   └── ToucanDAO_EVMCall_test.cdc ⭐ NEW: EVM call proposal Cadence tests
 │       ├── DEPLOYMENT_GUIDE.md ⭐ NEW: Comprehensive deployment guide
 │       ├── DEPLOYMENT_CHECKLIST.md ⭐ NEW: Quick deployment checklist
 │       ├── TOUCANS_VS_TOUCANDAO_ANALYSIS.md ⭐ NEW: Detailed comparison
@@ -630,10 +661,12 @@ flow-gove/
 - Files without markers are from the original codebase
 
 **Key Development Areas:**
-1. **EVM Integration**: FlowTreasuryWithOwner, COA setup, EVM call proposals
-2. **Deployment Automation**: Scripts for testnet deployment and testing
-3. **Capability Management**: COA capability setup and configuration
-4. **Documentation**: Comprehensive guides for deployment and troubleshooting
+1. **Frontend AI Agent** ⭐ NEW: AI-powered governance assistant with natural language interface
+2. **EVM Integration**: FlowTreasuryWithOwner, COA setup, EVM call proposals
+3. **Deployment Automation**: Scripts for testnet deployment and testing
+4. **Capability Management**: COA capability setup and configuration
+5. **Testing Suite**: Comprehensive E2E tests
+6. **Documentation**: Comprehensive guides for deployment and troubleshooting
 
 ## Technology Stack
 
