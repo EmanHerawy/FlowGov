@@ -13,6 +13,8 @@ This project **simplifies and modernizes** the original Toucans DAO by:
 
 **🌐 Live Demo**: [Netlify Deployment](https://flow-gov.netlify.app/)
 
+**🎥 Video Demo**: [Watch FlowGov in Action](https://drive.google.com/file/d/1GQejl3BdJDpm5XFhB8ILLMNZdn-CaI6R/view?usp=sharing)
+
 ---
 
 ## 🎯 Problem & Solution Overview
@@ -90,12 +92,13 @@ FlowGov addresses all four problems through:
 
 **Full Project Walkthrough** - See ToucanDAO in action!
 
+
 <video width="800" controls style="border-radius: 8px; margin: 20px 0;">
-  <source src="docs/screenshots/telegram-cloud-document-4-5773814945074389219.mp4" type="video/mp4">
+  <source src="https://drive.google.com/file/d/1GQejl3BdJDpm5XFhB8ILLMNZdn-CaI6R/view?usp=sharing" type="video/mp4">
   Your browser does not support the video tag.
 </video>
 
-
+**🎥 Video Demo**: [Watch FlowGov in Action](docs/screenshots/telegram-cloud-document-4-5773814945074389219.mp4)
 ### 🔗 Quick Links to Verify Our Work
 
 - **📹 Demo Video**: Watch the full walkthrough above
@@ -1230,7 +1233,7 @@ sequenceDiagram
     DAO->>DAO: Validate status == PENDING or ACTIVE
     DAO->>DAO: If ACTIVE, validate totalVotes == 0
     DAO->>DAO: Status = CANCELLED
-    DAO->>Creator: Refund deposit immediately
+    
 ```
 
 #### Scenario 5: Admin Operation (2/3 Quorum Required)
@@ -1284,7 +1287,9 @@ sequenceDiagram
 
 
 
-### 📸 Screenshots - Live System Demonstration
+### 📸 Screenshots & Video Demo - Live System Demonstration
+
+**🎥 [Watch the Full Demo Video](https://drive.google.com/file/d/1hopW84kYmKffxPIoumji3mY7cL7AxHq2/view?usp=sharing)** - Complete walkthrough of FlowGov features and capabilities!
 
 All screenshots below are from our **live, deployed system** on Flow Testnet, demonstrating real functionality!
 
