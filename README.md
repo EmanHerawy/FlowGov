@@ -13,7 +13,7 @@ This project **simplifies and modernizes** the original Toucans DAO by:
 
 **🌐 Live Demo**: [Netlify Deployment](https://flow-gov.netlify.app/)
 
-**🎥 Video Demo**: [Watch FlowGov in Action](https://drive.google.com/file/d/1GQejl3BdJDpm5XFhB8ILLMNZdn-CaI6R/view?usp=sharing)
+**📺 FlowGov Explanation**: [Watch Overview Video on Google Drive](https://drive.google.com/file/d/1GQejl3BdJDpm5XFhB8ILLMNZdn-CaI6R/view?usp=sharing)
 
 ---
 
@@ -88,17 +88,23 @@ FlowGov addresses all four problems through:
 
 ## 📹 Video Demo & Project Showcase
 
-### 🎥 Demo Video
+### 📺 FlowGov Explanation Video
+
+**Overview & Architecture** - Learn about FlowGov's features and how it works!
+
+👉 **📺 [Watch FlowGov Explanation Video on Google Drive](https://drive.google.com/file/d/1GQejl3BdJDpm5XFhB8ILLMNZdn-CaI6R/view?usp=sharing)** 👈
+
+*Complete overview explaining FlowGov's architecture, features, and how it solves DAO governance challenges.*
+
+### 🎥 Interactive Demo Video
 
 **Full Project Walkthrough** - See ToucanDAO in action!
 
+👉 **🎥 [Download/View Demo Video](docs/screenshots/telegram-cloud-document-4-5773814945074389219.mp4)** 👈
 
-<video width="800" controls style="border-radius: 8px; margin: 20px 0;">
-  <source src="https://drive.google.com/file/d/1GQejl3BdJDpm5XFhB8ILLMNZdn-CaI6R/view?usp=sharing" type="video/mp4">
-  Your browser does not support the video tag.
-</video>
+*Interactive demo showcasing FlowGov features, proposal creation, voting, and automated execution in real-time.*
 
-**🎥 Video Demo**: [Watch FlowGov in Action](docs/screenshots/telegram-cloud-document-4-5773814945074389219.mp4)
+> **Note**: Click the link above to view the demo video file. GitHub doesn't support inline video playback in README files.
 ### 🔗 Quick Links to Verify Our Work
 
 - **📹 Demo Video**: Watch the full walkthrough above
@@ -1289,7 +1295,9 @@ sequenceDiagram
 
 ### 📸 Screenshots & Video Demo - Live System Demonstration
 
-**🎥 [Watch the Full Demo Video](https://drive.google.com/file/d/1hopW84kYmKffxPIoumji3mY7cL7AxHq2/view?usp=sharing)** - Complete walkthrough of FlowGov features and capabilities!
+**🎥 [View Interactive Demo Video](docs/screenshots/telegram-cloud-document-4-5773814945074389219.mp4)** - Complete interactive walkthrough demonstrating FlowGov in action!
+
+**📺 [Watch Explanation Video](https://drive.google.com/file/d/1GQejl3BdJDpm5XFhB8ILLMNZdn-CaI6R/view?usp=sharing)** - Learn about FlowGov's architecture and features!
 
 All screenshots below are from our **live, deployed system** on Flow Testnet, demonstrating real functionality!
 
