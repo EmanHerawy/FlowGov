@@ -4,3 +4,5 @@ emulator-account.pkey
 
 # Pay attention to imports directory
 !imports
+.pkey
+dev-account.pkey
