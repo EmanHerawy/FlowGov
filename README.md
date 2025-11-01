@@ -13,6 +13,30 @@ This project **simplifies and modernizes** the original Toucans DAO by:
 
 **🌐 Live Demo**: [Netlify Deployment](https://flow-gov.netlify.app/)
 
+---
+
+## 📹 Video Demo & Project Showcase
+
+### 🎥 Demo Video
+
+**Full Project Walkthrough** - See ToucanDAO in action!
+
+<video width="800" controls style="border-radius: 8px; margin: 20px 0;">
+  <source src="docs/screenshots/telegram-cloud-document-4-5773814945074389219.mp4" type="video/mp4">
+  Your browser does not support the video tag.
+</video>
+
+
+### 🔗 Quick Links to Verify Our Work
+
+- **📹 Demo Video**: Watch the full walkthrough above
+- **🌐 Live Deployment**: 
+  - [Flowscan Testnet - ToucanDAO](https://testnet.flowscan.io/account/0xd020ccc9daaea77d)
+  - [Flowscan - ToucanToken](https://testnet.flowscan.io/account/0xd020ccc9daaea77d)
+- **🌐 EVM Contract**: 
+  - [EVM Explorer - FlowTreasuryWithOwner](https://testnet.evm.nodes.onflow.org/)
+- **📊 Architecture Diagrams**: See the detailed proposal lifecycle flow diagram below
+
 **📊 Quick Stats**:
 - ✅ **11 new smart contract features** (Proposal System, EVM Integration, Scheduler, etc.)
 - ✅ **AI Governance Agent** (Frontend innovation)
@@ -43,7 +67,7 @@ This project was developed as part of [Forte Hacks](https://www.hackquest.io/hac
 
 ---
 
-## 🎯 Hackathon Project Highlights (For Judges)
+## 🎯 Hackathon Project Highlights 
 
 ### 🚀 Core Innovation #1: Trustless Automated Execution via Flow Transaction Scheduler
 
@@ -1209,7 +1233,7 @@ The EVM integration provides **unprecedented flexibility** for DAO governance:
 
 ### 🔄 Proposal Lifecycle Highlights
 
-**Key Features for Judges:**
+**Key Features Summary:**
 
 1. **🔄 Auto-Execution**: All proposals execute automatically after cooldown
 2. **💰 Auto-Refunds**: Deposits refunded automatically for all outcomes
@@ -1219,3 +1243,39 @@ The EVM integration provides **unprecedented flexibility** for DAO governance:
 6. **🔗 EVM Bridge**: Execute removed features via EVM calls - best of both worlds!
 
 
+### 📸 Screenshots - Live System Demonstration
+
+All screenshots below are from our **live, deployed system** on Flow Testnet, demonstrating real functionality!
+
+
+<img src="docs/screenshots/image.png" alt="FlowGov Dashboard" width="800" style="border: 2px solid #ddd; border-radius: 8px; margin: 10px 0; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+
+*FlowGov main dashboard showing proposal overview, system status, and real-time updates*
+
+<img src="docs/screenshots/image copy.png" alt="Proposal Interface" width="800" style="border: 2px solid #ddd; border-radius: 8px; margin: 10px 0; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+
+*Proposal creation and management interface with intuitive user experience*
+
+
+<img src="docs/screenshots/image copy 2.png" alt="Smart Contract Execution" width="800" style="border: 2px solid #ddd; border-radius: 8px; margin: 10px 0; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+
+*Smart contract execution logs showing automated proposal processing via Flow Transaction Scheduler*
+
+<img src="docs/screenshots/image copy 3.png" alt="Transaction Details" width="800" style="border: 2px solid #ddd; border-radius: 8px; margin: 10px 0; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+
+*Detailed transaction information showing trustless automated execution and verification*
+
+
+<img src="docs/screenshots/image copy 4.png" alt="EVM Integration" width="800" style="border: 2px solid #ddd; border-radius: 8px; margin: 10px 0; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+
+*EVM contract integration and cross-chain governance capabilities through COA (Cadence-Owned Account)*
+
+<img src="docs/screenshots/image copy 5.png" alt="EVM Call Execution" width="800" style="border: 2px solid #ddd; border-radius: 8px; margin: 10px 0; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+
+*EVM call proposal execution successfully completed through COA, enabling arbitrary EVM contract calls*
+
+
+<img src="docs/screenshots/image copy 6.png" alt="Testnet Deployment" width="800" style="border: 2px solid #ddd; border-radius: 8px; margin: 10px 0; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+
+
+<img src="docs/screenshots/telegram-cloud-photo-size-4-5773814945534381253-y.jpg" alt="System Architecture" width="800" style="border: 2px solid #ddd; border-radius: 8px; margin: 10px 0; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
