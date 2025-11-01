@@ -15,6 +15,75 @@ This project **simplifies and modernizes** the original Toucans DAO by:
 
 ---
 
+## 🎯 Problem & Solution Overview
+
+### The Problems We Solve
+
+#### ❌ Problem #1: Manual Execution in Most DAOs
+**Issue**: Traditional DAOs (Compound, Uniswap, Aave) require someone to manually call `executeProposal()` after voting ends.
+
+**Impact**:
+- Execution delays (days or weeks)
+- Single points of failure
+- Trust requirements on executors
+- Maintenance overhead
+
+**✅ Our Solution**: **Trustless Automated Execution** via Flow's Transaction Scheduler - proposals auto-execute without any human intervention.
+
+---
+
+#### ❌ Problem #2: Poor Proposal Discovery & Understanding
+**Issue**: Users spend excessive time searching and understanding proposals. Good proposals are missed because interested supporters don't see them.
+
+**Impact**:
+- Low participation rates
+- Missed opportunities for valuable proposals
+- Time-consuming proposal research
+- Technical barriers to participation
+
+**✅ Our Solution**: **AI Governance Agent** - Conversational interface that helps users understand proposals through natural language queries. Real-time dashboard with proposal filtering and status tracking.
+
+---
+
+#### ❌ Problem #3: Cadence Limitations (No Arbitrary Data Execution)
+**Issue**: Unlike Solidity, Cadence doesn't natively support executing arbitrary contract calls or arbitrary data.
+
+**Impact**:
+- Limited extensibility
+- Complex features require contract upgrades
+- Hard to bridge to removed functionality
+- Rigid architecture
+
+**✅ Our Solution**: **EVM Integration via COA** - Execute arbitrary EVM contract calls through governance proposals. Bridge to Solidity functionality while keeping Cadence's security benefits.
+
+---
+
+#### ❌ Problem #4: Toucans DAO - Multisig Model, Not Open
+**Issue**: The original Toucans DAO we forked operates more like a multisig with fixed signers, not truly open for everyone.
+
+**Impact**:
+- Restricted participation (signers only)
+- Not democratic
+- Fixed access model
+- Limited community involvement
+
+**✅ Our Solution**: **Token-Weighted Voting & Community Support** - Any token holder can vote. Anyone can create and support proposals (not just creators). True democratic governance with economic stake requirements.
+
+---
+
+### 🚀 Our Complete Solution
+
+FlowGov addresses all four problems through:
+
+1. **🔄 Trustless Automation** - Flow Transaction Scheduler auto-executes all proposals
+2. **🤖 AI-Powered Discovery** - Natural language queries help users find and understand proposals
+3. **🔗 EVM Bridge** - Execute arbitrary logic via EVM while maintaining Cadence security
+4. **👥 Open Governance** - Token-weighted voting, anyone can participate
+
+**Result**: A truly decentralized, automated, and accessible DAO governance system.
+
+---
+
 ## 📹 Video Demo & Project Showcase
 
 ### 🎥 Demo Video
@@ -67,9 +136,9 @@ This project was developed as part of [Forte Hacks](https://www.hackquest.io/hac
 
 ---
 
-## 🎯 Hackathon Project Highlights 
+## 🎯 Key Innovations
 
-### 🚀 Core Innovation #1: Trustless Automated Execution via Flow Transaction Scheduler
+### 🚀 Innovation #1: Trustless Automated Execution
 
 **The Revolution**: **Most DAOs require manual execution** - someone must call `executeProposal()` after voting ends. **We've eliminated this completely** - all proposals auto-execute via Flow's Transaction Scheduler!
 
@@ -256,7 +325,6 @@ All deposits automatically refunded!
 - ✅ **Access Control** - Owner-only functions tested
 
 **✅ Integration Tests:**
-- ✅ **Cadence ↔ EVM** - Full integration between Cadence DAO and EVM contracts
 - ✅ **Transaction Scheduler** - Automated execution testing
 - ✅ **Multi-Token** - Treasury supports multiple token types
 
@@ -1214,33 +1282,6 @@ sequenceDiagram
 2. **AdminBasedOperation**: Add/remove members, update configuration
 3. **EVMCall**: **Execute arbitrary EVM contract calls** through COA - enables removed features!
 
-### 🎯 Why EVM Calls Are Revolutionary
-
-The EVM integration provides **unprecedented flexibility** for DAO governance:
-
-**Traditional Approach (Original Toucans):**
-- All logic must be implemented in Cadence
-- Contract upgrades required for new features
-- Complex features increase contract size
-
-**Our Approach (ToucanDAO):**
-- Core governance in Cadence (simple, secure, auditable)
-- Extended logic via EVM contracts (flexible, upgradeable)
-- Execute **arbitrary data** - any EVM contract call
-- **Bridge removed features** without contract modifications
-
-**Example**: Want NFT support? Deploy an EVM NFT contract and create an `EVMCall` proposal to call it!
-
-### 🔄 Proposal Lifecycle Highlights
-
-**Key Features Summary:**
-
-1. **🔄 Auto-Execution**: All proposals execute automatically after cooldown
-2. **💰 Auto-Refunds**: Deposits refunded automatically for all outcomes
-3. **👥 Community Support**: Anyone can deposit to activate proposals (not just creator)
-4. **⏰ Time-Based**: Proposals expire if not supported or voted on
-5. **🤖 AI Assistance**: Frontend AI agent helps users understand and vote on proposals
-6. **🔗 EVM Bridge**: Execute removed features via EVM calls - best of both worlds!
 
 
 ### 📸 Screenshots - Live System Demonstration
