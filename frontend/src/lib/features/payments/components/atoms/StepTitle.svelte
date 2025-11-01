@@ -12,7 +12,7 @@
 		<div class="icon-wrapper center">
 			<Icon icon="tabler:cash-banknote" />
 		</div>
-		<img src={daoData.generalInfo.logo} on:error={(e) => handleLogoImgError(e)} alt="Toucans" />
+		<img src={daoData.generalInfo.logo} on:error={(e) => handleLogoImgError(e)} alt="FlowGov" />
 	</div>
 	<h4>{title}</h4>
 </div>

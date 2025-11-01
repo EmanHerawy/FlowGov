@@ -34,7 +34,7 @@
 				? 'TestToken'
 				: 'EmeraldCity',
 		story:
-			'Toucans was created by the members of Emerald City DAO, the first DAO built #onFlow. We are a group of passionate builders crafting the future of Flow, the blockchain made for scalable and secure mainstream usage.'
+			'FlowGov was created by the members of Emerald City DAO, the first DAO built #onFlow. We are a group of passionate builders crafting the future of Flow, the blockchain made for scalable and secure mainstream usage.'
 	};
 	const ECDAO: DaoDatabaseData = projects.find(
 		(project) => project.project_id === ECDAOInfo.projectId
@@ -43,7 +43,7 @@
 	$: thisMonth = new Date().toLocaleString('default', { month: 'long' });
 </script>
 
-<OpenGraph title="Discover" description="Discover communities created on Toucans." />
+<OpenGraph title="Discover" description="Discover communities created on FlowGov." />
 
 <HeroSection />
 <HotestProjectsSection daoRankings={data.daoRankings} tokenRankings={data.tokenRankings} />
@@ -54,7 +54,7 @@
 	<FeaturedDaoSection
 		project={ECDAO}
 		story={ECDAOInfo.story}
-		title={`Emerald City DAO - the creators of Toucans`}
+		title={`Emerald City DAO - the creators of FlowGov`}
 	/>
 {/if}
 <ProjectsGridSection {projects} />

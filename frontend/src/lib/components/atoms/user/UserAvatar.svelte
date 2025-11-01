@@ -19,7 +19,7 @@
 
 	const handleImageError = (event: Event) => {
 		if (event.target && event.target instanceof HTMLImageElement) {
-			event.target.src = '/avatars/lost-toucan.png';
+			event.target.src = '/avatars/lost-flowgov.png';
 		}
 	};
 
@@ -41,7 +41,7 @@
 		{#if showName}
 			<div class="column">
 				<div class="row-2">
-					<span class="username">Searching Toucan...</span>
+					<span class="username">Searching FlowGov...</span>
 				</div>
 				{#if showWallet}
 					<WalletLabel

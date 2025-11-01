@@ -91,8 +91,8 @@
 		avatarDropDownNavigation={$user.addr ? avatarDropdownNav : undefined}
 		{network}
 		transactionInProgress={$transactionStore.progress}
-		logoText="Toucans"
-		logoUrl="/toucans-logo.png"
+		logoText="FlowGov"
+		logoUrl="/flowgov-logo.png"
 		{notificationsNumber}
 		width={$page.url.pathname.includes('/admin') ? 'large' : 'medium'}
 	/>
@@ -104,8 +104,8 @@
 			{navElements}
 			{emeraldTools}
 			socials={socialMedia}
-			logoText="Toucans"
-			logoUrl="/toucans-logo.png"
+			logoText="FlowGov"
+			logoUrl="/flowgov-logo.png"
 		/>
 	{/if}
 </div>

@@ -437,7 +437,7 @@ export const verifyAccountOwnership = async (userObject: CurrentUserObject) => {
 		testnet: '0x5b250a8a85b44a67',
 		mainnet: '0x5d4604a414ba4155'
 	}[network];
-	return await fcl.AppUtils.verifyAccountProof('Toucans', accountProofService.data, {
+	return await fcl.AppUtils.verifyAccountProof('FlowGov', accountProofService.data, {
 		fclCryptoContract
 	});
 };

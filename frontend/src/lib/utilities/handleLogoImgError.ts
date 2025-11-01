@@ -1,7 +1,7 @@
 export function handleLogoImgError(e) {
-    e.target.src = '/toucans-logo.png';
+    e.target.src = '/flowgov-logo.png';
 }
 
 export function handleBannerImgError(e) {
-    e.target.src = '/toucans-illustration.png';
+    e.target.src = '/flowgov-illustration.png';
 }
